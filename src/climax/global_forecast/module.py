@@ -2,8 +2,9 @@
 # Licensed under the MIT license.
 
 # credits: https://github.com/ashleve/lightning-hydra-template/blob/main/src/models/mnist_module.py
-from typing import Any
+from typing import Any, List
 
+import numpy as np
 import torch
 from pytorch_lightning import LightningModule
 from torchvision.transforms import transforms
@@ -16,6 +17,7 @@ from climax.utils.metrics import (
     lat_weighted_mse_val,
     lat_weighted_rmse,
 )
+from climax.utils.physics_loss import HypsometricLoss
 from climax.utils.pos_embed import interpolate_pos_embed
 
 
@@ -47,10 +49,25 @@ class GlobalForecastModule(LightningModule):
         max_epochs: int = 200000,
         warmup_start_lr: float = 1e-8,
         eta_min: float = 1e-8,
+        physics_lambda: float = 0.1,
+        physics_geopotential_upper: str = "geopotential_500",
+        physics_geopotential_lower: str = "geopotential_850",
+        physics_temperature_upper: str = "temperature_500",
+        physics_temperature_lower: str = "temperature_850",
+        physics_pressure_upper: float = 50000.0,
+        physics_pressure_lower: float = 85000.0,
     ):
         super().__init__()
         self.save_hyperparameters(logger=False, ignore=["net"])
         self.net = net
+        self.hypsometric_loss = HypsometricLoss(
+            geopotential_upper_idx=0,
+            geopotential_lower_idx=1,
+            temperature_upper_idx=2,
+            temperature_lower_idx=3,
+            pressure_upper=physics_pressure_upper,
+            pressure_lower=physics_pressure_lower,
+        )
         if len(pretrained_path) > 0:
             self.load_pretrained_weights(pretrained_path)
 
@@ -101,22 +118,76 @@ class GlobalForecastModule(LightningModule):
     def set_test_clim(self, clim):
         self.test_clim = clim
 
+    def _lat_weighted_mse_train(self, pred: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+        error = (pred - y) ** 2
+        w_lat = np.cos(np.deg2rad(self.lat))
+        w_lat = w_lat / w_lat.mean()
+        w_lat = torch.from_numpy(w_lat).unsqueeze(0).unsqueeze(-1).to(dtype=error.dtype, device=error.device)
+        return (error * w_lat.unsqueeze(1)).mean(dim=1).mean()
+
+    def _denormalize(self, x: torch.Tensor) -> torch.Tensor:
+        return self.denormalization(x)
+
+    def _set_physics_channel_indices(self, out_variables: List[str]) -> bool:
+        var_names = (
+            self.hparams.physics_geopotential_upper,
+            self.hparams.physics_geopotential_lower,
+            self.hparams.physics_temperature_upper,
+            self.hparams.physics_temperature_lower,
+        )
+        try:
+            indices = [out_variables.index(name) for name in var_names]
+        except ValueError:
+            return False
+
+        (
+            self.hypsometric_loss.geopotential_upper_idx,
+            self.hypsometric_loss.geopotential_lower_idx,
+            self.hypsometric_loss.temperature_upper_idx,
+            self.hypsometric_loss.temperature_lower_idx,
+        ) = indices
+        return True
+
+    def _compute_physics_loss(
+        self,
+        preds: torch.Tensor,
+        y: torch.Tensor,
+        out_variables: List[str],
+    ) -> torch.Tensor:
+        if not self._set_physics_channel_indices(out_variables):
+            return preds.new_zeros(())
+
+        preds_denorm = self._denormalize(preds)
+        _y_denorm = self._denormalize(y)
+        return self.hypsometric_loss(preds_denorm)
+
     def training_step(self, batch: Any, batch_idx: int):
         x, y, lead_times, variables, out_variables = batch
 
-        loss_dict, _ = self.net.forward(x, y, lead_times, variables, out_variables, [lat_weighted_mse], lat=self.lat)
+        loss_dict, preds = self.net.forward(
+            x, y, lead_times, variables, out_variables, [lat_weighted_mse], lat=self.lat
+        )
         loss_dict = loss_dict[0]
         for var in loss_dict.keys():
+            if var == "loss":
+                continue
             self.log(
                 "train/" + var,
                 loss_dict[var],
                 on_step=True,
                 on_epoch=False,
-                prog_bar=True,
+                prog_bar=False,
             )
-        loss = loss_dict["loss"]
 
-        return loss
+        mse_loss = self._lat_weighted_mse_train(preds, y)
+        physics_loss = self._compute_physics_loss(preds, y, out_variables)
+        total_loss = mse_loss + self.hparams.physics_lambda * physics_loss
+
+        self.log("train/mse_loss", mse_loss, on_step=True, on_epoch=False, prog_bar=True)
+        self.log("train/physics_loss", physics_loss, on_step=True, on_epoch=False, prog_bar=True)
+        self.log("train/loss", total_loss, on_step=True, on_epoch=False, prog_bar=True)
+
+        return total_loss
 
     def validation_step(self, batch: Any, batch_idx: int):
         x, y, lead_times, variables, out_variables = batch

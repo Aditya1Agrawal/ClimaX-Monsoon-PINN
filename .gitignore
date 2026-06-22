@@ -136,3 +136,15 @@ exps
 
 # snakemake logs
 .snakemake
+
+# Ignore dummy data
+fake_era5_demo/
+*.npz
+*.nc
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+
+# Ignore PyTorch Lightning logs
+exps/

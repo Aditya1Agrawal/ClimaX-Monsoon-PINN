@@ -59,8 +59,6 @@ trainer:
       init_args:
         max_depth: -1
 
-    - class_path: pytorch_lightning.callbacks.RichProgressBar
-
 # ---------------------------- MODEL -------------------------------------------
 model:
   lr: 5e-4
@@ -71,12 +69,19 @@ model:
   max_epochs: 100000
   warmup_start_lr: 1e-8
   eta_min: 1e-8
-  pretrained_path: ""
+  physics_lambda: 0.1
+  physics_geopotential_upper: "geopotential_500"
+  physics_geopotential_lower: "geopotential_850"
+  physics_temperature_upper: "temperature_500"
+  physics_temperature_lower: "temperature_850"
+  physics_pressure_upper: 50000.0
+  physics_pressure_lower: 85000.0
 
   net:
     class_path: climax.arch.ClimaX
     init_args:
-      default_vars: [
+      default_vars:
+        [
           "land_sea_mask",
           "orography",
           "lattitude",
@@ -138,8 +143,9 @@ model:
 
 # ---------------------------- DATA -------------------------------------------
 data:
-  root_dir: /datadrive/datasets/5.625deg_equally_np/
-  variables: [
+  root_dir: fake_era5_demo/5.625deg_npz/
+  variables:
+    [
       "land_sea_mask",
       "orography",
       "lattitude",
@@ -189,10 +195,19 @@ data:
       "specific_humidity_850",
       "specific_humidity_925",
     ]
-  out_variables: ["geopotential_500", "temperature_850", "2m_temperature", "10m_u_component_of_wind", "10m_v_component_of_wind"]
+  out_variables:
+    [
+      "geopotential_500",
+      "geopotential_850",
+      "temperature_500",
+      "temperature_850",
+      "2m_temperature",
+      "10m_u_component_of_wind",
+      "10m_v_component_of_wind",
+    ]
   predict_range: 72
   hrs_each_step: 1
   buffer_size: 10000
-  batch_size: 128
+  batch_size: 2
   num_workers: 1
   pin_memory: False
