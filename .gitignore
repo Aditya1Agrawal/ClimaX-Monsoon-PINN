@@ -148,3 +148,11 @@ __pycache__/
 
 # Ignore PyTorch Lightning logs
 exps/
+
+# Raw weather datasets
+raw_global_data/
+raw_global_data/5.625deg/
+
+# Preprocessed regional dataset
+regional_climax_dataset/
+regional_climax_dataset.zip

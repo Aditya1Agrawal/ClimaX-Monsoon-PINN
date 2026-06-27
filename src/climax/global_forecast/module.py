@@ -49,7 +49,7 @@ class GlobalForecastModule(LightningModule):
         max_epochs: int = 200000,
         warmup_start_lr: float = 1e-8,
         eta_min: float = 1e-8,
-        physics_lambda: float = 0.1,
+        physics_lambda: float = 1e-3,
         physics_geopotential_upper: str = "geopotential_500",
         physics_geopotential_lower: str = "geopotential_850",
         physics_temperature_upper: str = "temperature_500",
@@ -158,8 +158,12 @@ class GlobalForecastModule(LightningModule):
             return preds.new_zeros(())
 
         preds_denorm = self._denormalize(preds)
-        _y_denorm = self._denormalize(y)
-        return self.hypsometric_loss(preds_denorm)
+        y_denorm = self._denormalize(y)
+
+        return self.hypsometric_loss(
+            preds_denorm,
+            y_denorm,
+        )
 
     def training_step(self, batch: Any, batch_idx: int):
         x, y, lead_times, variables, out_variables = batch
@@ -180,11 +184,22 @@ class GlobalForecastModule(LightningModule):
             )
 
         mse_loss = self._lat_weighted_mse_train(preds, y)
-        physics_loss = self._compute_physics_loss(preds, y, out_variables)
-        total_loss = mse_loss + self.hparams.physics_lambda * physics_loss
+
+        physics_loss = self._compute_physics_loss(
+            preds,
+            y,
+            out_variables,
+        )
+
+        weighted_physics_loss = (
+            self.hparams.physics_lambda * physics_loss
+        )
+
+        total_loss = mse_loss + weighted_physics_loss
 
         self.log("train/mse_loss", mse_loss, on_step=True, on_epoch=False, prog_bar=True)
-        self.log("train/physics_loss", physics_loss, on_step=True, on_epoch=False, prog_bar=True)
+        self.log("train/physics_loss", physics_loss, on_step=True, on_epoch=False, prog_bar=False)
+        self.log("train/weighted_physics_loss", weighted_physics_loss, on_step=True, on_epoch=False, prog_bar=True)
         self.log("train/loss", total_loss, on_step=True, on_epoch=False, prog_bar=True)
 
         return total_loss
