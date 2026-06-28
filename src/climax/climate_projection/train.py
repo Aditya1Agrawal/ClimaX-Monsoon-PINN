@@ -2,6 +2,7 @@
 # Licensed under the MIT license.
 
 import os
+from pydoc import cli
 
 from pytorch_lightning.cli import LightningCLI
 from climax.climate_projection.module import ClimateProjectionModule
@@ -31,6 +32,8 @@ def main():
     cli.model.set_test_clim(cli.datamodule.get_test_clim())
 
     # fit() runs the training
+    print("num_sanity_val_steps =", cli.trainer.num_sanity_val_steps)
+    print("check_val_every_n_epoch =", cli.trainer.check_val_every_n_epoch)
     cli.trainer.fit(cli.model, datamodule=cli.datamodule)
 
     # test the trained model

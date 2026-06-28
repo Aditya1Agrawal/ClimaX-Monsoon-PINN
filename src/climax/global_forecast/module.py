@@ -164,17 +164,30 @@ class GlobalForecastModule(LightningModule):
             preds_denorm,
             y_denorm,
         )
-
     def training_step(self, batch: Any, batch_idx: int):
+
+        # Print only once
+        if self.current_epoch == 0 and batch_idx == 0:
+            print(f"physics_lambda = {self.hparams.physics_lambda}")
+
         x, y, lead_times, variables, out_variables = batch
 
         loss_dict, preds = self.net.forward(
-            x, y, lead_times, variables, out_variables, [lat_weighted_mse], lat=self.lat
+            x,
+            y,
+            lead_times,
+            variables,
+            out_variables,
+            [lat_weighted_mse],
+            lat=self.lat,
         )
+
         loss_dict = loss_dict[0]
+
         for var in loss_dict.keys():
             if var == "loss":
                 continue
+
             self.log(
                 "train/" + var,
                 loss_dict[var],
@@ -183,28 +196,67 @@ class GlobalForecastModule(LightningModule):
                 prog_bar=False,
             )
 
+        # Forecast loss
         mse_loss = self._lat_weighted_mse_train(preds, y)
 
+        # Physics loss
         physics_loss = self._compute_physics_loss(
             preds,
             y,
             out_variables,
         )
 
+        # Weighted physics loss
         weighted_physics_loss = (
             self.hparams.physics_lambda * physics_loss
         )
 
+        # Total loss
         total_loss = mse_loss + weighted_physics_loss
 
-        self.log("train/mse_loss", mse_loss, on_step=True, on_epoch=False, prog_bar=True)
-        self.log("train/physics_loss", physics_loss, on_step=True, on_epoch=False, prog_bar=False)
-        self.log("train/weighted_physics_loss", weighted_physics_loss, on_step=True, on_epoch=False, prog_bar=True)
-        self.log("train/loss", total_loss, on_step=True, on_epoch=False, prog_bar=True)
+        # Logging
+        self.log(
+            "train/mse_loss",
+            mse_loss,
+            on_step=True,
+            on_epoch=False,
+            prog_bar=True,
+        )
+
+        self.log(
+            "train/physics_loss",
+            physics_loss,
+            on_step=True,
+            on_epoch=False,
+            prog_bar=False,
+        )
+
+        self.log(
+            "train/weighted_physics_loss",
+            weighted_physics_loss,
+            on_step=True,
+            on_epoch=False,
+            prog_bar=True,
+        )
+
+        self.log(
+            "train/loss",
+            total_loss,
+            on_step=True,
+            on_epoch=False,
+            prog_bar=True,
+        )
 
         return total_loss
 
     def validation_step(self, batch: Any, batch_idx: int):
+       
+        
+   
+        if batch_idx == 0:
+            print("=" * 60)
+            print(f"VALIDATION STARTED - Epoch {self.current_epoch}")
+            print("=" * 60)
         x, y, lead_times, variables, out_variables = batch
 
         if self.pred_range < 24:

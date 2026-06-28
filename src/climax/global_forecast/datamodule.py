@@ -104,8 +104,25 @@ class GlobalForecastDataModule(LightningDataModule):
         return clim
 
     def setup(self, stage: Optional[str] = None):
+        print(f"\n========== setup(stage={stage}) ==========")
+        print(f"Train files : {len(self.lister_train)}")
+        print(f"Val files   : {len(self.lister_val)}")
+        print(f"Test files  : {len(self.lister_test)}")
+
+        if len(self.lister_train) > 0:
+            print("First train file:", self.lister_train[0])
+
+        if len(self.lister_val) > 0:
+            print("First val file:", self.lister_val[0])
+
+        if len(self.lister_test) > 0:
+            print("First test file:", self.lister_test[0])
+
         # load datasets only if they're not loaded already
         if not self.data_train and not self.data_val and not self.data_test:
+
+            print("Creating training dataset...")
+
             self.data_train = ShuffleIterableDataset(
                 IndividualForecastDataIter(
                     Forecast(
@@ -128,6 +145,8 @@ class GlobalForecastDataModule(LightningDataModule):
                 buffer_size=self.hparams.buffer_size,
             )
 
+            print("Creating validation dataset...")
+
             self.data_val = IndividualForecastDataIter(
                 Forecast(
                     NpyReader(
@@ -146,6 +165,8 @@ class GlobalForecastDataModule(LightningDataModule):
                 transforms=self.transforms,
                 output_transforms=self.output_transforms,
             )
+
+            print("Creating test dataset...")
 
             self.data_test = IndividualForecastDataIter(
                 Forecast(
@@ -166,6 +187,8 @@ class GlobalForecastDataModule(LightningDataModule):
                 output_transforms=self.output_transforms,
             )
 
+            print("Datasets created successfully.")
+
     def train_dataloader(self):
         return DataLoader(
             self.data_train,
@@ -177,6 +200,7 @@ class GlobalForecastDataModule(LightningDataModule):
         )
 
     def val_dataloader(self):
+        print("val_dataloader() called")
         return DataLoader(
             self.data_val,
             batch_size=self.hparams.batch_size,

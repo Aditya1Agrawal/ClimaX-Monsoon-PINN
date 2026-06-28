@@ -1,0 +1,221 @@
+
+seed_everything: 42
+
+# ==============================================================================
+# TRAINER
+# ==============================================================================
+
+trainer:
+  default_root_dir: /kaggle/working/ClimaX_Outputs
+
+  accelerator: gpu
+  devices: 2
+  strategy: ddp
+  num_nodes: 1
+
+  precision: 32
+
+  min_epochs: 1
+  max_epochs: 50
+
+  enable_progress_bar: true
+  enable_checkpointing: true
+  sync_batchnorm: true
+
+  gradient_clip_val: 1.0
+
+  check_val_every_n_epoch: 1
+  num_sanity_val_steps: 2
+
+  log_every_n_steps: 50
+
+  fast_dev_run: false
+
+  logger:
+    class_path: pytorch_lightning.loggers.tensorboard.TensorBoardLogger
+    init_args:
+      save_dir: /kaggle/working/ClimaX_Outputs/logs
+      name: regional_india
+      version: null
+
+  callbacks:
+
+    - class_path: pytorch_lightning.callbacks.LearningRateMonitor
+      init_args:
+        logging_interval: step
+
+    - class_path: pytorch_lightning.callbacks.ModelCheckpoint
+      init_args:
+        dirpath: /kaggle/working/ClimaX_Outputs/checkpoints
+
+        monitor: val/w_rmse
+        mode: min
+
+        save_top_k: 3
+        save_last: true
+
+        filename: epoch_{epoch:03d}
+
+        verbose: true
+        auto_insert_metric_name: false
+
+    - class_path: pytorch_lightning.callbacks.EarlyStopping
+      init_args:
+        monitor: val/w_rmse
+        mode: min
+
+        patience: 5
+        min_delta: 0.0
+
+    - class_path: pytorch_lightning.callbacks.RichModelSummary
+      init_args:
+        max_depth: -1
+
+
+# ==============================================================================
+# MODEL
+# ==============================================================================
+
+model:
+
+  lr: 5e-4
+
+  beta_1: 0.9
+  beta_2: 0.99
+
+  weight_decay: 1e-5
+
+  warmup_epochs: 10000
+  max_epochs: 100000
+
+  warmup_start_lr: 1e-8
+  eta_min: 1e-8
+
+  physics_lambda: 0.001
+
+  physics_geopotential_upper: geopotential_500
+  physics_geopotential_lower: geopotential_850
+
+  physics_temperature_upper: temperature_500
+  physics_temperature_lower: temperature_850
+
+  physics_pressure_upper: 50000.0
+  physics_pressure_lower: 85000.0
+
+  net:
+
+    class_path: climax.arch.ClimaX
+
+    init_args:
+
+      default_vars:
+
+        [
+          "2m_temperature",
+          "10m_u_component_of_wind",
+          "10m_v_component_of_wind",
+
+          "temperature_50",
+          "temperature_250",
+          "temperature_500",
+          "temperature_600",
+          "temperature_700",
+          "temperature_850",
+          "temperature_925",
+
+          "geopotential_50",
+          "geopotential_250",
+          "geopotential_500",
+          "geopotential_600",
+          "geopotential_700",
+          "geopotential_850",
+          "geopotential_925"
+        ]
+
+      img_size: [6, 6]
+
+      patch_size: 2
+
+      embed_dim: 1024
+
+      depth: 8
+
+      decoder_depth: 2
+
+      num_heads: 16
+
+      mlp_ratio: 4
+
+      drop_path: 0.1
+
+      drop_rate: 0.1
+
+
+# ==============================================================================
+# DATA
+# ==============================================================================
+
+data:
+
+  root_dir: /kaggle/working/regional_climax_dataset_6x6
+
+  variables:
+
+    [
+      "2m_temperature",
+      "10m_u_component_of_wind",
+      "10m_v_component_of_wind",
+
+      "temperature_50",
+      "temperature_250",
+      "temperature_500",
+      "temperature_600",
+      "temperature_700",
+      "temperature_850",
+      "temperature_925",
+
+      "geopotential_50",
+      "geopotential_250",
+      "geopotential_500",
+      "geopotential_600",
+      "geopotential_700",
+      "geopotential_850",
+      "geopotential_925"
+    ]
+
+  out_variables:
+
+    [
+      "2m_temperature",
+      "10m_u_component_of_wind",
+      "10m_v_component_of_wind",
+
+      "temperature_50",
+      "temperature_250",
+      "temperature_500",
+      "temperature_600",
+      "temperature_700",
+      "temperature_850",
+      "temperature_925",
+
+      "geopotential_50",
+      "geopotential_250",
+      "geopotential_500",
+      "geopotential_600",
+      "geopotential_700",
+      "geopotential_850",
+      "geopotential_925"
+    ]
+
+  predict_range: 72
+
+  hrs_each_step: 1
+
+  buffer_size: 10000
+
+  batch_size: 32
+
+  num_workers: 1
+
+  pin_memory: false
+

@@ -120,6 +120,9 @@ class ClimateProjectionModule(LightningModule):
         return loss
 
     def validation_step(self, batch: Any, batch_idx: int):
+        if batch_idx == 0:
+            print(f"Validation is running! Epoch {self.current_epoch}")
+
         x, y, lead_times, variables, out_variables = batch
 
         all_loss_dicts = self.net.evaluate(

@@ -69,7 +69,7 @@ model:
   max_epochs: 100000
   warmup_start_lr: 1e-8
   eta_min: 1e-8
-  physics_lambda: 0.1
+  physics_lambda: 0.001
   physics_geopotential_upper: "geopotential_500"
   physics_geopotential_lower: "geopotential_850"
   physics_temperature_upper: "temperature_500"
