@@ -14,21 +14,31 @@ Measured prevalences: `docs/mtech/results/labels_corrected6x6/` (the primary dat
 | Spatial unit | 5.625° grid cell (~625 km), box-mean ERA5 | This is all the data resolves. "Extreme" means extreme for that grid box |
 | Forecast target | Input at hour `t` → label of the UTC day containing `t + 72 h`, from the same split | `align_to_forecast`; targets outside the split are dropped |
 
-## A. Extreme precipitation: not implemented (data missing)
+## A. Extreme precipitation (implemented; `src/climax_hazards/precip.py`)
 
-Neither the regional dataset nor the local raw WeatherBench folder contains precipitation. Labels will **not** be derived from temperature, wind or geopotential.
-Suitable sources:
+**Source:** IMD gridded daily rainfall, 0.25° (Pai et al. 2014, *Mausam* 65(1)). Observation-based (rain gauges), land only.
+Downloaded 1979–2018 with `imdlib` into `raw_imd_rainfall/rain/<year>.grd` (971 MB, git-ignored).
+The reader matches `imdlib` exactly, and all 40 years passed size and value checks.
+Labels are **not** derived from temperature, wind or geopotential.
 
-1. **IMD gridded daily rainfall, 0.25°** (Pai et al. 2014, *Mausam* 65(1)). Observation-based (gauges), 1901–present, land only.
-   The rainfall day ends at 03 UTC (08:30 IST), so the labels must be shifted by 3 h relative to UTC days.
-   Regrid by area-weighted (conservative) averaging of the 0.25° cells inside each 5.625° box, and require a minimum land-cell coverage per box.
-   **Recommended for labels.** IMD's categories (heavy ≥ 64.5 mm/day, very heavy ≥ 115.6, extremely heavy ≥ 204.5) are station/point thresholds.
-   For box means, a train-period percentile of wet-day box-mean rainfall (e.g. 95th/99th, per season) will be needed. The absolute IMD categories are only a comparison.
-2. **WeatherBench 5.625° `total_precipitation`** (ERA5 hourly accumulation, m), on the same grid and timeline (1979–2018).
-   Alignment is trivial, but it is a model product with known biases over India. Use it as a second label source or as an input, not as the only "truth".
+**Regridding (my choice):** area-conservative averaging (cos-latitude weighted overlap) of the 0.25° cells into each 5.625° box.
+`coverage` is the valid fraction of the box area. Boxes with mean coverage < 0.5 are NaN.
 
-Manual step for you: download IMD gridded rainfall (`imdlib` Python package, or the IMD Pune data portal), 1979–2018. Optionally download WeatherBench
-`total_precipitation_5.625deg` from the WeatherBench mediaTUM archive.
+**Spatial limitation:** IMD covers India only, so just **9 of 36 boxes** reach 50 % coverage (14 at 30 %, 6 at 70 %).
+Pakistan, Nepal, Bangladesh, Tibet, Myanmar and the seas have no precipitation labels. The covered boxes are central, north and north-east India.
+
+**Primary definition** (ETCCDI R95p style): daily box-mean rainfall > the per-box 95th percentile of train-period (1979–2010) **wet-day** (≥ 1 mm) box-mean rainfall, all year.
+The thresholds come out at 14–30 mm/day.
+
+**Sensitivity:** 90/99th percentile; 2.5 mm wet day (IMD "rainy day"); coverage 0.3 or 0.7; June–September only; IMD absolute categories.
+- The IMD "heavy" (64.5 mm/day) and "very heavy" (115.6 mm/day) categories almost never occur in box means (≤ 0.04 % and 0 %).
+- Those station categories therefore **cannot** be used at 5.625°. Percentile labels are the only defensible choice.
+
+**Day convention (UNVERIFIED):** an IMD daily value is a 24 h accumulation ending at 08:30 IST (03 UTC).
+Whether IMD date D means 03 UTC D-1 → D or D → D+1 has to be confirmed in the IMD data documentation before forecast alignment.
+It is a parameter (`imd_day_starts_on_date`) and shifts the target by one day.
+
+**Alternative / second source:** WeatherBench 5.625° `total_precipitation` (ERA5, same grid; model-based). Not used yet.
 
 ## B. Heatwave (implemented)
 
@@ -67,6 +77,7 @@ Prevalence = event cell-days / valid cell-days. NaN cell-days (sea cells for hea
 | `heatwave_pct` (MAMJ, p90, ≥3 d, land) | 5.33 % | 6.53 % | 9.17 % |
 | `heatwave_imd` (MAMJ, ≥2 d, land) | 0.89 % | 0.69 % | 0.95 % |
 | `extreme_wind` (p99 of daily max, all cells) | 1.00 % | 0.83 % | 0.90 % |
+| `extreme_precip` (p95 of wet days, coverage ≥ 0.5, 9 boxes) | 2.01 % | 2.05 % | 1.79 % |
 
 Findings:
 1. **Non-stationarity (heat).** Fixed 1979–2010 thresholds give 1.7× more heatwave days in 2015–2018, and the effect grows for rarer thresholds
@@ -77,6 +88,7 @@ Findings:
    Only 0.02–0.03 % of cell-days exceed Beaufort 8 (17.2 m/s), which confirms that box-mean winds cannot represent gales.
 3. **IMD criteria at grid scale.** Box-mean Tmax ≥ 40 °C on 7 594 land cell-days in train (max 49.0 °C). Combined with the 4.5 °C departure,
    the IMD-style label is ~6–10× rarer than the percentile label and concentrated in NW India and Pakistan.
-4. **Class imbalance** of roughly 1:10 (heat) to 1:100 (wind) needs weighted or focal losses and PR-based metrics. Accuracy is meaningless here.
+4. **Precipitation is stationary** (≈ 2 % in all splits) and strongly seasonal: about 7–8 % of cell-days in July and < 0.5 % from December to May.
+5. **Class imbalance** of roughly 1:10 (heat) to 1:100 (wind) needs weighted or focal losses and PR-based metrics. Accuracy is meaningless here.
 
 Full sensitivity grid: `threshold_sensitivity.csv`. Seasonal and monthly prevalence: `monthly_prevalence.csv`. Maps: `label_maps_and_seasonality.png`.

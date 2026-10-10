@@ -10,9 +10,9 @@ The original internship code (`src/climax/**`, `configs/regional_india.yaml`) st
 |---|---|
 | 1 Audit | Done: `docs/mtech/AUDIT_REPORT.md` |
 | 2 Data/checkpoint access | Notebook `notebooks/01_inspect_data_and_checkpoints.ipynb` written and dry-run locally (real data + synthetic checkpoint). **Kaggle run pending** |
-| Step B evaluation | `scripts/mtech/evaluate_forecast.py` done. Persistence and climatology baselines measured (`docs/mtech/results/`). **Checkpoint same-sample evaluation pending (Kaggle)** |
+| Step B evaluation | Done. `epoch_016` beats persistence and climatology on all 17 variables (`docs/mtech/results/README.md`) |
 | Step C corrected grid | Done locally: `regional_climax_dataset_6x6_corrected/` (lon 67.5–95.625°E, orography fixed, timestamps). Columns 73.125–95.625 are byte-identical to the original in all 320 shards. MD5 manifest: `docs/mtech/corrected_dataset_manifest.json`. **Upload to Kaggle pending (you)** |
-| Step D labels | Heatwave (percentile + IMD-style, March–June) and extreme wind done; notebook `02_labels_eda.ipynb`; see `HAZARD_DEFINITIONS.md`. Precipitation blocked on data |
+| Step D labels | Heatwave (percentile + IMD-style, March–June), extreme wind and extreme precipitation (IMD 0.25°, 9 covered boxes) done; notebook `02_labels_eda.ipynb`; see `HAZARD_DEFINITIONS.md`. IMD day convention still to verify |
 | 5–9 | Not started |
 
 ## Decisions taken (2026-10-10)
