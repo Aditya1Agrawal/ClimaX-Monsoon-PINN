@@ -156,3 +156,7 @@ raw_global_data/5.625deg/
 # Preprocessed regional dataset
 regional_climax_dataset/
 regional_climax_dataset.zip
+
+# M.Tech derived datasets and local outputs
+regional_climax_dataset_6x6_corrected/
+outputs/
