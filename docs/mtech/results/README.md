@@ -37,3 +37,20 @@ Interpretation:
 - The duplicated column changes the reported RMSE by up to ±2.7 %. The internship's headline numbers should be quoted from the "real" columns.
 - No statement about the physics loss is possible: this is the λ=0.001 model, and no λ=0 model exists yet.
 - Climatology has no ACC by construction (its anomaly is zero).
+
+## Physics-loss ablation, single seed (λ = 0 vs λ = 0.001), original padded grid
+
+File: `physics_ablation_seed42_orig_padded_climaxmetrics.csv`. These are the ClimaX `test_step` metrics, transcribed from the two Kaggle test tables:
+padded 6×6 grid including the duplicated column, ClimaX ACC (split climatology), test 2015–2018, 72 h. Both runs used seed 42 and 20 epochs, with selection on `val/w_rmse`.
+Best `val/w_rmse`: λ=0 → 104.877, λ=0.001 → 103.583.
+
+**Result:** with λ=0.001, test RMSE is lower on **17/17** variables (−1.3 % to −4.0 %, median −2.7 %) and ACC is higher on **17/17** (+0.004 to +0.021).
+The largest gains are in lower-tropospheric temperature (t850 −4.0 %, t925 −3.8 %, t700 −3.6 %) and the 10 m winds (−3.0 to −3.5 %).
+
+**What this does and does not show:**
+- It is **one run per setting**. Run-to-run variance (seed, data order, DDP non-determinism) is unknown, so the 1–4 % differences cannot yet be called significant.
+  The consistent sign across all 17 correlated variables is encouraging, but it is not independent evidence. **Needed:** ≥ 3 seeds per setting (notebook 03).
+- The scores include the duplicated column. Re-score both checkpoints on the real columns with `evaluate_forecast.py` (notebook 03, `EXTRA_EVAL`).
+- "More physically consistent" has **not been measured yet**. `evaluate_forecast.py` now reports `hyps_resid_<upper>_<lower>`, the RMSE of the hypsometric-residual error in metres,
+  for the trained layer (500–850 hPa) and for five untrained layers. The test baselines are 10.5 m (climatology) and 13.0 m (persistence) for 500–850 hPa.
+- Wall-clock: λ=0 took 3 h 59 m and λ=0.001 took 4 h 50 m. The physics run has 21 % more runtime with identical step counts, which is worth explaining (logging or DDP overhead?).

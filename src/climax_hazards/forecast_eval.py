@@ -14,6 +14,12 @@ Metrics
 * lat-weighted ACC of anomalies w.r.t. the train climatology above (pooled over
   samples). Note this differs from ClimaX's built-in ACC, which subtracts the
   evaluated split's own time-mean.
+* physical consistency: for each pressure layer (upper, lower) with both geopotential
+  and temperature in the outputs, the hypsometric residual
+  ``R = (phi_u - phi_l)/g - (R_d/g) * (T_u + T_l)/2 * ln(p_l/p_u)`` (metres) is computed
+  for forecast and truth; the lat-weighted RMSE of ``R_forecast - R_truth`` is reported
+  as variable ``hyps_resid_<upper>_<lower>``. Layers outside the training loss
+  (500-850 hPa) test whether consistency generalises.
 """
 
 from __future__ import annotations
@@ -67,6 +73,26 @@ def iter_pairs(data_dir, split: str, variables: Sequence[str], lead: int, max_fi
         yield arr[:-lead], arr[lead:], ts[lead:]
 
 
+R_D, G = 287.05, 9.80665  # same constants as climax.utils.physics_loss
+DEFAULT_LAYERS = ((500, 850), (250, 500), (700, 850), (850, 925), (600, 700), (50, 250))
+
+
+def physics_layers(out_variables, layers=DEFAULT_LAYERS):
+    ov = list(out_variables)
+    return [(u, l) for u, l in layers if all(f"{v}_{p}" in ov for v in ("geopotential", "temperature") for p in (u, l))]
+
+
+def hypsometric_residuals(arr, out_variables, layers):
+    """(N, V, H, W) physical fields -> (N, len(layers), H, W) hypsometric residuals in metres."""
+    ov = list(out_variables)
+    out = []
+    for u, l in layers:
+        zu, zl = arr[:, ov.index(f"geopotential_{u}")], arr[:, ov.index(f"geopotential_{l}")]
+        tu, tl = arr[:, ov.index(f"temperature_{u}")], arr[:, ov.index(f"temperature_{l}")]
+        out.append((zu - zl) / G - (R_D / G) * 0.5 * (tu + tl) * np.log(l / u))
+    return np.stack(out, axis=1) if out else arr[:, :0]
+
+
 def _lat_w(lat):
     w = np.cos(np.deg2rad(lat))
     return (w / w.mean())[None, None, :, None]
@@ -118,6 +144,12 @@ def evaluate(
     """
     lat = np.load(f"{data_dir}/lat.npy")
     out_idx = [list(variables).index(v) for v in out_variables]
+    layers = physics_layers(out_variables)
+    names = list(out_variables) + [f"hyps_resid_{u}_{l}" for u, l in layers]
+
+    def with_phys(a):
+        return np.concatenate([a, hypsometric_residuals(a, out_variables, layers)], axis=1)
+
     column_sets = column_sets or {"real": slice(None)}
     models = models or {}
     scorers = {}
@@ -140,13 +172,13 @@ def evaluate(
                         continue
                 key = (name, cs_name)
                 if key not in scorers:
-                    scorers[key] = Scorer(lat, len(out_variables), cs)
-                scorers[key].update(p, yy, cc)
+                    scorers[key] = Scorer(lat, len(names), cs)
+                scorers[key].update(with_phys(p), with_phys(yy), with_phys(cc))
 
     rows = []
     for (name, cs_name), s in scorers.items():
         r = s.result()
-        for i, v in enumerate(out_variables):
+        for i, v in enumerate(names):
             rows.append({"source": name, "columns": cs_name, "variable": v, "rmse": float(r["rmse"][i]), "acc": float(r["acc"][i]), "n": r["n"]})
     return rows
 

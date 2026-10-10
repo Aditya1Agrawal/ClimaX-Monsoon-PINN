@@ -230,6 +230,33 @@ def pad_lon_edge(arr: np.ndarray, expected_width: int = 5) -> np.ndarray:
     return np.pad(arr, pad, mode="edge")
 
 
+def make_padded_copy(src: str | os.PathLike, dst: str | os.PathLike, lon_step: float = 5.625) -> Path:
+    """Reproduce the internship notebook's 6x6 copy (edge-pad lon by one column) into ``dst``.
+
+    Same operations as the internship cell: every array with ndim >= 2 in the split files is
+    edge-padded on the last axis, normalisation scalars are left alone, and ``lon`` gets
+    ``lon[-1] + lon_step`` appended. Refuses to run on an already padded source or into an
+    existing destination, so padding can never happen twice.
+    """
+    import shutil
+
+    src, dst = Path(src), Path(dst)
+    if detect_lon_padding(src)["looks_padded"]:
+        raise ValueError(f"{src} is already padded")
+    if dst.exists():
+        raise FileExistsError(f"{dst} exists; delete it or reuse it explicitly")
+    shutil.copytree(src, dst)
+    width = int(np.load(src / "lon.npy").size)
+    for split in SPLITS:
+        for f in (dst / split).glob("*.npz"):
+            with np.load(f) as d:
+                data = {k: (pad_lon_edge(v, width) if v.ndim >= 2 else v) for k, v in d.items()}
+            np.savez(f, **data)
+    lon = np.load(dst / "lon.npy")
+    np.save(dst / "lon.npy", np.append(lon, lon[-1] + lon_step))
+    return dst
+
+
 def md5_manifest(root: str | os.PathLike) -> Dict[str, Dict]:
     root = Path(root)
     out = {}

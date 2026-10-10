@@ -102,3 +102,33 @@ def test_checkpoint_inference(tmp_path):
     assert not cmp["missing_in_checkpoint"] and not cmp["unexpected_in_checkpoint"] and not cmp["shape_mismatch"]
     other = ClimaX(vars_ + ["d"], img_size=[6, 6], patch_size=2, embed_dim=64, depth=2, decoder_depth=2, num_heads=4)
     assert "var_embed" in iu.compare_state_dict(other, sd)["shape_mismatch"]
+
+
+def test_hypsometric_residual_metric():
+    from climax_hazards import forecast_eval as fe
+
+    ov = ["geopotential_500", "geopotential_850", "temperature_500", "temperature_850", "2m_temperature"]
+    assert fe.physics_layers(ov) == [(500, 850)]
+    t = 270.0
+    dz = (fe.R_D / fe.G) * t * np.log(850 / 500)
+    arr = np.zeros((1, 5, 2, 2))
+    arr[:, 0], arr[:, 1], arr[:, 2], arr[:, 3] = dz * fe.G + 1000.0, 1000.0, t, t
+    assert np.allclose(fe.hypsometric_residuals(arr, ov, [(500, 850)]), 0, atol=1e-6)
+    arr[:, 0] += 10 * fe.G  # 10 m too thick
+    assert np.allclose(fe.hypsometric_residuals(arr, ov, [(500, 850)]), 10)
+
+
+def test_make_padded_copy_matches_internship_and_refuses_twice(tmp_path):
+    src = tmp_path / "src"
+    src.mkdir()
+    _make_dataset(src)
+    dst = iu.make_padded_copy(src, tmp_path / "pad")
+    assert np.allclose(np.load(dst / "lon.npy"), 73.125 + 5.625 * np.arange(6))
+    a = np.load(iu.shard_files(dst, "train")[0])["2m_temperature"]
+    assert a.shape[-1] == 6 and np.array_equal(a[..., 5], a[..., 4])
+    assert np.load(dst / "train" / "climatology.npz")["2m_temperature"].shape == (1, 3, 6)
+    assert np.load(dst / "normalize_mean.npz")["2m_temperature"].shape == (1,)
+    with pytest.raises(ValueError):
+        iu.make_padded_copy(dst, tmp_path / "pad2")
+    with pytest.raises(FileExistsError):
+        iu.make_padded_copy(src, dst)
