@@ -1,0 +1,1314 @@
+{
+ "description": "MD5 manifest of the local regional_climax_dataset folder (unpadded 6x5 grid) used to cross-check the Kaggle copy.",
+ "n_files": 327,
+ "files": {
+  "lat.npy": {
+   "md5": "770de77dbaf0027dcb98c5f2b0ab95be",
+   "bytes": 176
+  },
+  "lon.npy": {
+   "md5": "2b147a892fd0fe0579ffe3ebad0d1467",
+   "bytes": 168
+  },
+  "normalize_mean.npz": {
+   "md5": "476f241d40e8dbacc15644afa025b2fe",
+   "bytes": 5900
+  },
+  "normalize_std.npz": {
+   "md5": "4a1175ddcc8ef64bef548ce7a0cfe7a2",
+   "bytes": 5900
+  },
+  "test/2015_0.npz": {
+   "md5": "837854c7c9f6dafe60482ce5b6bf2782",
+   "bytes": 3159404
+  },
+  "test/2015_1.npz": {
+   "md5": "678b388f9887a430843a08346e2a04c6",
+   "bytes": 3159404
+  },
+  "test/2015_2.npz": {
+   "md5": "2178acf6ca5d15298e2a5a705dfcd959",
+   "bytes": 3159404
+  },
+  "test/2015_3.npz": {
+   "md5": "7f5f35d7ac014a52a96d5cfcf7977ad8",
+   "bytes": 3159404
+  },
+  "test/2015_4.npz": {
+   "md5": "7de2629c0cda68c3200ce339bf71794d",
+   "bytes": 3159404
+  },
+  "test/2015_5.npz": {
+   "md5": "91e7bb09b0d9bf5b1755f57e1df45086",
+   "bytes": 3159404
+  },
+  "test/2015_6.npz": {
+   "md5": "a04a4e2a22ac4f4fc92359b425b4571c",
+   "bytes": 3159404
+  },
+  "test/2015_7.npz": {
+   "md5": "68e2c43d89cc9102d1a10945e2cc0316",
+   "bytes": 3159404
+  },
+  "test/2016_0.npz": {
+   "md5": "1b360de8aad657340c23996fd3bb1f0f",
+   "bytes": 3159404
+  },
+  "test/2016_1.npz": {
+   "md5": "7aeeee4de95a1f806bb77e2c3cf972d5",
+   "bytes": 3159404
+  },
+  "test/2016_2.npz": {
+   "md5": "267bda8c9eaa00f9b56dc0ddbd6fb809",
+   "bytes": 3159404
+  },
+  "test/2016_3.npz": {
+   "md5": "fcb1e9bab775b6b93e4b3f83f4daec75",
+   "bytes": 3159404
+  },
+  "test/2016_4.npz": {
+   "md5": "f81de3256258fac502d04769e82184e5",
+   "bytes": 3159404
+  },
+  "test/2016_5.npz": {
+   "md5": "822e6b3cb9dbedb1029c5f6ff0bb6eb0",
+   "bytes": 3159404
+  },
+  "test/2016_6.npz": {
+   "md5": "00e494e5bb53b06adcb9c2e76bee8cba",
+   "bytes": 3159404
+  },
+  "test/2016_7.npz": {
+   "md5": "d4ec17733efda5812e0955aafa91492a",
+   "bytes": 3159404
+  },
+  "test/2017_0.npz": {
+   "md5": "907b652c0cc80d20701ba8cffa8fe6f1",
+   "bytes": 3159404
+  },
+  "test/2017_1.npz": {
+   "md5": "24fae5bda4a9a5e5562b8d9c178e3424",
+   "bytes": 3159404
+  },
+  "test/2017_2.npz": {
+   "md5": "fc13d434a7a9ebef747df72146793f7e",
+   "bytes": 3159404
+  },
+  "test/2017_3.npz": {
+   "md5": "a54b04780afb8436e1cc849c975beebd",
+   "bytes": 3159404
+  },
+  "test/2017_4.npz": {
+   "md5": "18649e22e7c30bfb42cf812012d148c8",
+   "bytes": 3159404
+  },
+  "test/2017_5.npz": {
+   "md5": "59cdfb16f074cc1382f071e55f28a513",
+   "bytes": 3159404
+  },
+  "test/2017_6.npz": {
+   "md5": "df0f716faa0af7b7ba0ce543a26cf703",
+   "bytes": 3159404
+  },
+  "test/2017_7.npz": {
+   "md5": "9062081d08d72d6418794beb59568ef6",
+   "bytes": 3159404
+  },
+  "test/2018_0.npz": {
+   "md5": "1aa6eac92db58d8d1493651a7a7c09e7",
+   "bytes": 3159404
+  },
+  "test/2018_1.npz": {
+   "md5": "bb98688c9e853643f36aafda8ba7f5fe",
+   "bytes": 3159404
+  },
+  "test/2018_2.npz": {
+   "md5": "af0bfab1e99732604a261d3acc7669a9",
+   "bytes": 3159404
+  },
+  "test/2018_3.npz": {
+   "md5": "cc0dab73bf7697c91990c7ae4b2246b2",
+   "bytes": 3159404
+  },
+  "test/2018_4.npz": {
+   "md5": "944de276412e99af12a4d88d94ca66d5",
+   "bytes": 3159404
+  },
+  "test/2018_5.npz": {
+   "md5": "f74792fa3c5e500b57359a618592a866",
+   "bytes": 3159404
+  },
+  "test/2018_6.npz": {
+   "md5": "35f79f0a0d868aaf5d2ae06e7a2543a8",
+   "bytes": 3159404
+  },
+  "test/2018_7.npz": {
+   "md5": "d6086e6d082d99ee4108207fc8f89af3",
+   "bytes": 3159404
+  },
+  "test/climatology.npz": {
+   "md5": "32a48654aee81acf3f0ac8a7f8b86c28",
+   "bytes": 7326
+  },
+  "train/1979_0.npz": {
+   "md5": "8cea50d7428941fbd71873c545ee34b3",
+   "bytes": 3159404
+  },
+  "train/1979_1.npz": {
+   "md5": "c2705f0e948e427b14421c8fd9965db5",
+   "bytes": 3159404
+  },
+  "train/1979_2.npz": {
+   "md5": "798dd9bc7e92c134501aa7afe2b2c429",
+   "bytes": 3159404
+  },
+  "train/1979_3.npz": {
+   "md5": "7e1ecf77968a40140f42827dc62deb01",
+   "bytes": 3159404
+  },
+  "train/1979_4.npz": {
+   "md5": "ab5e2646c9320f165fe2808cd4dbd579",
+   "bytes": 3159404
+  },
+  "train/1979_5.npz": {
+   "md5": "7680dfd108a698ec6e4cb7bc01c46047",
+   "bytes": 3159404
+  },
+  "train/1979_6.npz": {
+   "md5": "50f036908f4dab0ffb2bd5aaf5ae2fe3",
+   "bytes": 3159404
+  },
+  "train/1979_7.npz": {
+   "md5": "980e82c2af77b4ea79af89708027a6c9",
+   "bytes": 3159404
+  },
+  "train/1980_0.npz": {
+   "md5": "b1c3a1ef89d727772993bba393e0207c",
+   "bytes": 3159404
+  },
+  "train/1980_1.npz": {
+   "md5": "3e7c18fc07b7a76ae30e5568ae8ef6b7",
+   "bytes": 3159404
+  },
+  "train/1980_2.npz": {
+   "md5": "21f0200c0e830fad7053e9c2af7cc984",
+   "bytes": 3159404
+  },
+  "train/1980_3.npz": {
+   "md5": "ce2ad906a655f5f49d1b191deee15a83",
+   "bytes": 3159404
+  },
+  "train/1980_4.npz": {
+   "md5": "f52215da0bf7cd15f4ec44951356a6f8",
+   "bytes": 3159404
+  },
+  "train/1980_5.npz": {
+   "md5": "0723c705b9456a5dcf85bdea9acba3c0",
+   "bytes": 3159404
+  },
+  "train/1980_6.npz": {
+   "md5": "79e557aef65589a0cae169d7a629e870",
+   "bytes": 3159404
+  },
+  "train/1980_7.npz": {
+   "md5": "6da5fea9274a6199bd4cd3cf9abc16ef",
+   "bytes": 3159404
+  },
+  "train/1981_0.npz": {
+   "md5": "d3e47663ef87b4e7eaab9554f292c8e7",
+   "bytes": 3159404
+  },
+  "train/1981_1.npz": {
+   "md5": "70c5ef48e5459e3a131100e53e874399",
+   "bytes": 3159404
+  },
+  "train/1981_2.npz": {
+   "md5": "a635998059eaef1a34b0a24a4614e74e",
+   "bytes": 3159404
+  },
+  "train/1981_3.npz": {
+   "md5": "2426f593a1ae2bc9f5f046d26d0d18db",
+   "bytes": 3159404
+  },
+  "train/1981_4.npz": {
+   "md5": "d2231f3d52f46f507e8e9beeb673778d",
+   "bytes": 3159404
+  },
+  "train/1981_5.npz": {
+   "md5": "4db677c14e78c79768d12eb384dd332a",
+   "bytes": 3159404
+  },
+  "train/1981_6.npz": {
+   "md5": "e8eb537ad3905b41ad9c1f89ff3cc6ac",
+   "bytes": 3159404
+  },
+  "train/1981_7.npz": {
+   "md5": "e8897cb2f10e4dc86f746fc239a6860c",
+   "bytes": 3159404
+  },
+  "train/1982_0.npz": {
+   "md5": "6a0159bd1646bc7b966fce15299849ad",
+   "bytes": 3159404
+  },
+  "train/1982_1.npz": {
+   "md5": "d5c663217ddd0db4f4b6dc79cedb7e9e",
+   "bytes": 3159404
+  },
+  "train/1982_2.npz": {
+   "md5": "c422f4e0a1086e149adf2f765e5c99f4",
+   "bytes": 3159404
+  },
+  "train/1982_3.npz": {
+   "md5": "bba887b4f677679a1d67c6de177b521c",
+   "bytes": 3159404
+  },
+  "train/1982_4.npz": {
+   "md5": "657149b5539cd53556cda4edb04200e4",
+   "bytes": 3159404
+  },
+  "train/1982_5.npz": {
+   "md5": "211fecc70f34004e7a8ef2a22c11ec63",
+   "bytes": 3159404
+  },
+  "train/1982_6.npz": {
+   "md5": "1f2cbb3f9b0217a39ffdc7f5969e7790",
+   "bytes": 3159404
+  },
+  "train/1982_7.npz": {
+   "md5": "e6e38fd678fa2d5203c67f19c8ee71e3",
+   "bytes": 3159404
+  },
+  "train/1983_0.npz": {
+   "md5": "1c7726a1599d3bd88f7cb6f98f8f234a",
+   "bytes": 3159404
+  },
+  "train/1983_1.npz": {
+   "md5": "d3e103729269f23091d0a877a75f0da6",
+   "bytes": 3159404
+  },
+  "train/1983_2.npz": {
+   "md5": "d948103a1e77741fa394e85053c7f49d",
+   "bytes": 3159404
+  },
+  "train/1983_3.npz": {
+   "md5": "f12f557718e2b0f6fa797571c7b28c7f",
+   "bytes": 3159404
+  },
+  "train/1983_4.npz": {
+   "md5": "c6450da892ef403ee9ee26e645c7832f",
+   "bytes": 3159404
+  },
+  "train/1983_5.npz": {
+   "md5": "198604e8a879bf48e1cf8de0e9175657",
+   "bytes": 3159404
+  },
+  "train/1983_6.npz": {
+   "md5": "7cf7b4f38294f3012fc95338149bebcd",
+   "bytes": 3159404
+  },
+  "train/1983_7.npz": {
+   "md5": "7210c38fb43cf249cf3104a26fca3d22",
+   "bytes": 3159404
+  },
+  "train/1984_0.npz": {
+   "md5": "f9d0f49fed6a7063d2b75077407ef374",
+   "bytes": 3159404
+  },
+  "train/1984_1.npz": {
+   "md5": "325498d6ccbb2241396c918915871699",
+   "bytes": 3159404
+  },
+  "train/1984_2.npz": {
+   "md5": "cac10b57e9a68ac656613242ecc34732",
+   "bytes": 3159404
+  },
+  "train/1984_3.npz": {
+   "md5": "55ac7d5fb3c423b305e49d42074d72b0",
+   "bytes": 3159404
+  },
+  "train/1984_4.npz": {
+   "md5": "78222bee1795eb72d80563c77bebadf9",
+   "bytes": 3159404
+  },
+  "train/1984_5.npz": {
+   "md5": "467ad685def6758b5e2860b1c9d30cfe",
+   "bytes": 3159404
+  },
+  "train/1984_6.npz": {
+   "md5": "46901c00c34d225fe38ebea23c659a78",
+   "bytes": 3159404
+  },
+  "train/1984_7.npz": {
+   "md5": "b77dacaebe0bd25a22c97eef94c612e1",
+   "bytes": 3159404
+  },
+  "train/1985_0.npz": {
+   "md5": "f5231213c9656db0aa1e3d2a06d48c1b",
+   "bytes": 3159404
+  },
+  "train/1985_1.npz": {
+   "md5": "a2efcbde310a421ce2ec47518bfadc0d",
+   "bytes": 3159404
+  },
+  "train/1985_2.npz": {
+   "md5": "1712a59929dfeaacde1f65ef9f2bd14a",
+   "bytes": 3159404
+  },
+  "train/1985_3.npz": {
+   "md5": "dd791528604361c58c3231af68e5ae78",
+   "bytes": 3159404
+  },
+  "train/1985_4.npz": {
+   "md5": "744951203b0c5723ce6aff575aa0ef65",
+   "bytes": 3159404
+  },
+  "train/1985_5.npz": {
+   "md5": "07d094e53cb345f36d86954b8c023436",
+   "bytes": 3159404
+  },
+  "train/1985_6.npz": {
+   "md5": "6a6e65a3f34d24563fec949ff33070d2",
+   "bytes": 3159404
+  },
+  "train/1985_7.npz": {
+   "md5": "57b3b12f2ee4c44b08295dffaaec5a66",
+   "bytes": 3159404
+  },
+  "train/1986_0.npz": {
+   "md5": "39774d9adb2194d80f526d30832a648a",
+   "bytes": 3159404
+  },
+  "train/1986_1.npz": {
+   "md5": "1a4d43d3aee3e923c52c7e2a007c7038",
+   "bytes": 3159404
+  },
+  "train/1986_2.npz": {
+   "md5": "0c592ed8de5247d4dc243851166e137e",
+   "bytes": 3159404
+  },
+  "train/1986_3.npz": {
+   "md5": "5d7d6c5a44f6b3b4732e2a9defa7946a",
+   "bytes": 3159404
+  },
+  "train/1986_4.npz": {
+   "md5": "89634690340e45f17672bedf6afc6f51",
+   "bytes": 3159404
+  },
+  "train/1986_5.npz": {
+   "md5": "029db8524a93c6a01751feb67787d974",
+   "bytes": 3159404
+  },
+  "train/1986_6.npz": {
+   "md5": "ff6beeb18d38f2cad901d689105d4ebe",
+   "bytes": 3159404
+  },
+  "train/1986_7.npz": {
+   "md5": "6b5d7d69e2900ab42fac23529dd6118c",
+   "bytes": 3159404
+  },
+  "train/1987_0.npz": {
+   "md5": "bd22d6b3778125ba4b658fc1141c6acc",
+   "bytes": 3159404
+  },
+  "train/1987_1.npz": {
+   "md5": "b2d7b7791450763e9b312b9a078cc334",
+   "bytes": 3159404
+  },
+  "train/1987_2.npz": {
+   "md5": "74aa0696e6e36f9a0659df9977bd95e5",
+   "bytes": 3159404
+  },
+  "train/1987_3.npz": {
+   "md5": "d48f39c0d707c17d0ceb28dbb4f7d4dc",
+   "bytes": 3159404
+  },
+  "train/1987_4.npz": {
+   "md5": "7af79f4818350190ab412e3315568ba8",
+   "bytes": 3159404
+  },
+  "train/1987_5.npz": {
+   "md5": "e575bf036c639242d9a7d0549d603b1f",
+   "bytes": 3159404
+  },
+  "train/1987_6.npz": {
+   "md5": "f8e017222fa29c5e46bf05587894f87e",
+   "bytes": 3159404
+  },
+  "train/1987_7.npz": {
+   "md5": "0481a236a30e6cb9c1053b95aefbe9db",
+   "bytes": 3159404
+  },
+  "train/1988_0.npz": {
+   "md5": "6b46ddd01bca92ce15ed0b3dc316bd0d",
+   "bytes": 3159404
+  },
+  "train/1988_1.npz": {
+   "md5": "ae2674029dc04b8068d85a56bd976665",
+   "bytes": 3159404
+  },
+  "train/1988_2.npz": {
+   "md5": "f71963c54a4144ff705dd01a6389479f",
+   "bytes": 3159404
+  },
+  "train/1988_3.npz": {
+   "md5": "eb60b620c9e3c969ee3e3a611bc70198",
+   "bytes": 3159404
+  },
+  "train/1988_4.npz": {
+   "md5": "fe52322d1421829742b6085ec0c53acc",
+   "bytes": 3159404
+  },
+  "train/1988_5.npz": {
+   "md5": "23b4efd5db068ae2de36a3d7c0967e81",
+   "bytes": 3159404
+  },
+  "train/1988_6.npz": {
+   "md5": "2b3be7cfda56067cac7617bf15891286",
+   "bytes": 3159404
+  },
+  "train/1988_7.npz": {
+   "md5": "5b97173e92bbf3f41e83484597b1eb7b",
+   "bytes": 3159404
+  },
+  "train/1989_0.npz": {
+   "md5": "903db3b6f61e03a70c648f1d112ff45c",
+   "bytes": 3159404
+  },
+  "train/1989_1.npz": {
+   "md5": "e313dd8d2a2d2c47392877ed1282a523",
+   "bytes": 3159404
+  },
+  "train/1989_2.npz": {
+   "md5": "52160d2219dbbd197a66b186c765f899",
+   "bytes": 3159404
+  },
+  "train/1989_3.npz": {
+   "md5": "5c62569ddf25724429b3350b85748c50",
+   "bytes": 3159404
+  },
+  "train/1989_4.npz": {
+   "md5": "c971e14075281fc644ced078cf421b08",
+   "bytes": 3159404
+  },
+  "train/1989_5.npz": {
+   "md5": "3796abb54ecd84c89cce653c923145c3",
+   "bytes": 3159404
+  },
+  "train/1989_6.npz": {
+   "md5": "f89fcf21b83bd06418225989dfb028e8",
+   "bytes": 3159404
+  },
+  "train/1989_7.npz": {
+   "md5": "894a18b41819990936d7215187c94770",
+   "bytes": 3159404
+  },
+  "train/1990_0.npz": {
+   "md5": "696d791343ba33219b8b4298842cffae",
+   "bytes": 3159404
+  },
+  "train/1990_1.npz": {
+   "md5": "c10772ebbed424c8ac6cbb885a3ddbb7",
+   "bytes": 3159404
+  },
+  "train/1990_2.npz": {
+   "md5": "2653a6fd4ff821b923f68d7eb1aed34a",
+   "bytes": 3159404
+  },
+  "train/1990_3.npz": {
+   "md5": "2f49bb4b9e57477bb1082509c6aecf72",
+   "bytes": 3159404
+  },
+  "train/1990_4.npz": {
+   "md5": "ea7ec44475ff56089105a88acabafe2a",
+   "bytes": 3159404
+  },
+  "train/1990_5.npz": {
+   "md5": "1406d815fbb915b07062687f8d74fdd1",
+   "bytes": 3159404
+  },
+  "train/1990_6.npz": {
+   "md5": "1ac92d52b100b1c6bdc97d4fbcc463ea",
+   "bytes": 3159404
+  },
+  "train/1990_7.npz": {
+   "md5": "975608729e82a48325aea75edd42287c",
+   "bytes": 3159404
+  },
+  "train/1991_0.npz": {
+   "md5": "1763b4af12db155cc940157b765e31e5",
+   "bytes": 3159404
+  },
+  "train/1991_1.npz": {
+   "md5": "08ef7569e2126afe1c0b4145d3e0d062",
+   "bytes": 3159404
+  },
+  "train/1991_2.npz": {
+   "md5": "c0d1a8be75d3a4f51bc4b3bd26ae3749",
+   "bytes": 3159404
+  },
+  "train/1991_3.npz": {
+   "md5": "7ee5e5f6e557ea2f4a9f7050b9312801",
+   "bytes": 3159404
+  },
+  "train/1991_4.npz": {
+   "md5": "00a0e04608248451f7b7b4b4c0614703",
+   "bytes": 3159404
+  },
+  "train/1991_5.npz": {
+   "md5": "8e8fa201e1a33f26a343c871e1fd6ed2",
+   "bytes": 3159404
+  },
+  "train/1991_6.npz": {
+   "md5": "65292229e223b3c56c3b6c5e486bcb45",
+   "bytes": 3159404
+  },
+  "train/1991_7.npz": {
+   "md5": "007dd3aeb2c53647ee72eb96bedac660",
+   "bytes": 3159404
+  },
+  "train/1992_0.npz": {
+   "md5": "0774d19fc7f28a1d79e937cc0cfe5122",
+   "bytes": 3159404
+  },
+  "train/1992_1.npz": {
+   "md5": "0fc93820d46a3bbd6da61661d60d4afc",
+   "bytes": 3159404
+  },
+  "train/1992_2.npz": {
+   "md5": "b94cd37b30d8fedd1c0d864a3b3215d9",
+   "bytes": 3159404
+  },
+  "train/1992_3.npz": {
+   "md5": "50997ecc9f6c7b0f8138534e85453222",
+   "bytes": 3159404
+  },
+  "train/1992_4.npz": {
+   "md5": "a4f7763c164d8f3c11df839ac2744180",
+   "bytes": 3159404
+  },
+  "train/1992_5.npz": {
+   "md5": "f5a0838ba304f1625e4410192d993bf9",
+   "bytes": 3159404
+  },
+  "train/1992_6.npz": {
+   "md5": "74c06238f88ebf8647bc90a6c286499c",
+   "bytes": 3159404
+  },
+  "train/1992_7.npz": {
+   "md5": "79f9a220df4b5b9aa42b577e305b3b88",
+   "bytes": 3159404
+  },
+  "train/1993_0.npz": {
+   "md5": "d1e4d1140fae2a9590b35be767dfe7a3",
+   "bytes": 3159404
+  },
+  "train/1993_1.npz": {
+   "md5": "13de86b7e42429301b081e79c4bf57e2",
+   "bytes": 3159404
+  },
+  "train/1993_2.npz": {
+   "md5": "7d83527a69bd0e5eb4711d092b060e19",
+   "bytes": 3159404
+  },
+  "train/1993_3.npz": {
+   "md5": "46350ec2cb4080c877b34e094f0fecbd",
+   "bytes": 3159404
+  },
+  "train/1993_4.npz": {
+   "md5": "aff13968fdbac7f13250068ce5284e52",
+   "bytes": 3159404
+  },
+  "train/1993_5.npz": {
+   "md5": "937a90db6a5351c71d9c3fb07c762923",
+   "bytes": 3159404
+  },
+  "train/1993_6.npz": {
+   "md5": "a8f4a488ebf77f906c300a058cc8334b",
+   "bytes": 3159404
+  },
+  "train/1993_7.npz": {
+   "md5": "b25a9ffcf4020d32fb25a203430cab90",
+   "bytes": 3159404
+  },
+  "train/1994_0.npz": {
+   "md5": "f1788cdc26f84543400c7a18d7a193b8",
+   "bytes": 3159404
+  },
+  "train/1994_1.npz": {
+   "md5": "d5df00cb217718552cf7dcdbddf2646c",
+   "bytes": 3159404
+  },
+  "train/1994_2.npz": {
+   "md5": "496d022b41bb50ee7ad0db0815bec904",
+   "bytes": 3159404
+  },
+  "train/1994_3.npz": {
+   "md5": "675e5c3056c23230aed6b70670e49830",
+   "bytes": 3159404
+  },
+  "train/1994_4.npz": {
+   "md5": "3d6bbd41c0a98c10fb96950b5a03f87f",
+   "bytes": 3159404
+  },
+  "train/1994_5.npz": {
+   "md5": "7ebabdc334e2f8a3c201c9a76cd5fe97",
+   "bytes": 3159404
+  },
+  "train/1994_6.npz": {
+   "md5": "7f73638703944607ceb2e9b5d273c7c7",
+   "bytes": 3159404
+  },
+  "train/1994_7.npz": {
+   "md5": "36fd7113832924beecd53f04b1b21428",
+   "bytes": 3159404
+  },
+  "train/1995_0.npz": {
+   "md5": "a0b4b36637bb719331fffcee5ba1925a",
+   "bytes": 3159404
+  },
+  "train/1995_1.npz": {
+   "md5": "402a608570bb5217c41b2b9a2a682e29",
+   "bytes": 3159404
+  },
+  "train/1995_2.npz": {
+   "md5": "162a86ffe559e61451ea194046ef6476",
+   "bytes": 3159404
+  },
+  "train/1995_3.npz": {
+   "md5": "d174455506102c7d9e121d93acd48655",
+   "bytes": 3159404
+  },
+  "train/1995_4.npz": {
+   "md5": "d6b30f07be26ef88cde762540ec127b0",
+   "bytes": 3159404
+  },
+  "train/1995_5.npz": {
+   "md5": "cab816e3e8f672038ca936da005d00e4",
+   "bytes": 3159404
+  },
+  "train/1995_6.npz": {
+   "md5": "a56763d13555f84ad798437a1739c28a",
+   "bytes": 3159404
+  },
+  "train/1995_7.npz": {
+   "md5": "be96b3080be084088e9439f4c5cdf293",
+   "bytes": 3159404
+  },
+  "train/1996_0.npz": {
+   "md5": "9c35b7a2675db6363bc9c321779e0473",
+   "bytes": 3159404
+  },
+  "train/1996_1.npz": {
+   "md5": "d32f8c71bf89405eb31f6e6904346632",
+   "bytes": 3159404
+  },
+  "train/1996_2.npz": {
+   "md5": "cc3bb6f60c755cd5b3cbfdacc2bf2d72",
+   "bytes": 3159404
+  },
+  "train/1996_3.npz": {
+   "md5": "364d5ce4aa5c75437a9d962d75a4c137",
+   "bytes": 3159404
+  },
+  "train/1996_4.npz": {
+   "md5": "f5aa3ea7b876c677a3a1ae37bfefb1ad",
+   "bytes": 3159404
+  },
+  "train/1996_5.npz": {
+   "md5": "26ba91083e2706dd44d50661a0d03df1",
+   "bytes": 3159404
+  },
+  "train/1996_6.npz": {
+   "md5": "b3e8ca8ad4aba7405e8f35de26392291",
+   "bytes": 3159404
+  },
+  "train/1996_7.npz": {
+   "md5": "50897d2cbe37cf30f689715ad6687e11",
+   "bytes": 3159404
+  },
+  "train/1997_0.npz": {
+   "md5": "2c1f5e0db3e14d8f396701ea1d129d68",
+   "bytes": 3159404
+  },
+  "train/1997_1.npz": {
+   "md5": "88629a4cfc607015e7c4ba537ca90623",
+   "bytes": 3159404
+  },
+  "train/1997_2.npz": {
+   "md5": "ce1f5e40d561b8228b4ef248c495a369",
+   "bytes": 3159404
+  },
+  "train/1997_3.npz": {
+   "md5": "7075b4739d2b146f69824f2543ea7e01",
+   "bytes": 3159404
+  },
+  "train/1997_4.npz": {
+   "md5": "43928b89a9fda43342c6f1e918993ace",
+   "bytes": 3159404
+  },
+  "train/1997_5.npz": {
+   "md5": "d60d99bee0296209b7438dfd66eec394",
+   "bytes": 3159404
+  },
+  "train/1997_6.npz": {
+   "md5": "a55a3e19a4e542bf67f51771bf270b78",
+   "bytes": 3159404
+  },
+  "train/1997_7.npz": {
+   "md5": "cd8f0e02f2580cbff827edd1edc1f3b2",
+   "bytes": 3159404
+  },
+  "train/1998_0.npz": {
+   "md5": "4969c4173935fa934b7295108bd93a0c",
+   "bytes": 3159404
+  },
+  "train/1998_1.npz": {
+   "md5": "d82f5006b207839180e1e52d6a20897a",
+   "bytes": 3159404
+  },
+  "train/1998_2.npz": {
+   "md5": "21e689d2d7d1455890c3114f447a5c30",
+   "bytes": 3159404
+  },
+  "train/1998_3.npz": {
+   "md5": "30cc3cc25f7c21f9dff91c4e88c27c2d",
+   "bytes": 3159404
+  },
+  "train/1998_4.npz": {
+   "md5": "5e1faa8cb28634ff11b0f408f66bf07a",
+   "bytes": 3159404
+  },
+  "train/1998_5.npz": {
+   "md5": "e65a07a39bbf48c841b5d240de9fcef9",
+   "bytes": 3159404
+  },
+  "train/1998_6.npz": {
+   "md5": "579556c748c82b3b2b51ddb8789b2a33",
+   "bytes": 3159404
+  },
+  "train/1998_7.npz": {
+   "md5": "b6b4921b7a8b46ca58b3c83d97bc5391",
+   "bytes": 3159404
+  },
+  "train/1999_0.npz": {
+   "md5": "434e6a95ec1015e4ae0846ddde6d95df",
+   "bytes": 3159404
+  },
+  "train/1999_1.npz": {
+   "md5": "7d7af77537929a40f00eca8a61f72d14",
+   "bytes": 3159404
+  },
+  "train/1999_2.npz": {
+   "md5": "4e8cbb93faf3f53c7d5e0887bd781435",
+   "bytes": 3159404
+  },
+  "train/1999_3.npz": {
+   "md5": "814a813fa9c176714925f1c6f2cd02ea",
+   "bytes": 3159404
+  },
+  "train/1999_4.npz": {
+   "md5": "caa1e51fc8ee8b95df30ef8cf06e9217",
+   "bytes": 3159404
+  },
+  "train/1999_5.npz": {
+   "md5": "7e019a2916f04024c305791b622e89a1",
+   "bytes": 3159404
+  },
+  "train/1999_6.npz": {
+   "md5": "6c26ba9b51cd338ae91758a31d056494",
+   "bytes": 3159404
+  },
+  "train/1999_7.npz": {
+   "md5": "2cbfdcc10d4486af192c69d3060e4744",
+   "bytes": 3159404
+  },
+  "train/2000_0.npz": {
+   "md5": "d7af9f9e58328ce3fa012d28aac11f00",
+   "bytes": 3159404
+  },
+  "train/2000_1.npz": {
+   "md5": "026934f07140b86606b6b39e555dc091",
+   "bytes": 3159404
+  },
+  "train/2000_2.npz": {
+   "md5": "fa1c3053d1afee3e3f8965b03a7a6f60",
+   "bytes": 3159404
+  },
+  "train/2000_3.npz": {
+   "md5": "ee9e3a0ad18308fd399af0465eb563bd",
+   "bytes": 3159404
+  },
+  "train/2000_4.npz": {
+   "md5": "e2027dd112c6f74d2a7c4cfc75c649bd",
+   "bytes": 3159404
+  },
+  "train/2000_5.npz": {
+   "md5": "73251440c8b443295c6e59c2c8596c1e",
+   "bytes": 3159404
+  },
+  "train/2000_6.npz": {
+   "md5": "9f9aea62e3425ea0eb2eb482f056e968",
+   "bytes": 3159404
+  },
+  "train/2000_7.npz": {
+   "md5": "a9fecacbf3eebc5447ea95fffb6be11f",
+   "bytes": 3159404
+  },
+  "train/2001_0.npz": {
+   "md5": "d724e00819160ec72cf1b5d63487d470",
+   "bytes": 3159404
+  },
+  "train/2001_1.npz": {
+   "md5": "d6dc29862878604e20a29edded7d9e3a",
+   "bytes": 3159404
+  },
+  "train/2001_2.npz": {
+   "md5": "bfaf29f9188dc60b25df2bf8e8de9bb4",
+   "bytes": 3159404
+  },
+  "train/2001_3.npz": {
+   "md5": "92454a7b5a8e11ea9e82b774060c847d",
+   "bytes": 3159404
+  },
+  "train/2001_4.npz": {
+   "md5": "bc3a16874bc4d9058d2a556c5e2b9d6c",
+   "bytes": 3159404
+  },
+  "train/2001_5.npz": {
+   "md5": "33482c82e9095c9638978a3c2e709bcd",
+   "bytes": 3159404
+  },
+  "train/2001_6.npz": {
+   "md5": "3745ca84ba8b0a25ddc0481d07194c34",
+   "bytes": 3159404
+  },
+  "train/2001_7.npz": {
+   "md5": "5e43f2d85ce07e0f7182337365579c57",
+   "bytes": 3159404
+  },
+  "train/2002_0.npz": {
+   "md5": "219ef26b96185156126b17a1a2dfbbcf",
+   "bytes": 3159404
+  },
+  "train/2002_1.npz": {
+   "md5": "1a3c712158301bf42063670e3c0b2688",
+   "bytes": 3159404
+  },
+  "train/2002_2.npz": {
+   "md5": "427c274b5fe99f396b71b2638d538453",
+   "bytes": 3159404
+  },
+  "train/2002_3.npz": {
+   "md5": "b8b7f26040d27c42130e4dbe2acc8a8b",
+   "bytes": 3159404
+  },
+  "train/2002_4.npz": {
+   "md5": "e0ad9c74e39971d87def09eafa84a1aa",
+   "bytes": 3159404
+  },
+  "train/2002_5.npz": {
+   "md5": "7feb484a90f917416934ca875ce16820",
+   "bytes": 3159404
+  },
+  "train/2002_6.npz": {
+   "md5": "35751affe6712a11f78f31fbaa5e8a19",
+   "bytes": 3159404
+  },
+  "train/2002_7.npz": {
+   "md5": "6ad50bd1cd116bf12b4282f2e13b14dd",
+   "bytes": 3159404
+  },
+  "train/2003_0.npz": {
+   "md5": "82b834c9139f0d767418e61ea6a3da8d",
+   "bytes": 3159404
+  },
+  "train/2003_1.npz": {
+   "md5": "a1c1867892c7d4e3b5e4ca626c797540",
+   "bytes": 3159404
+  },
+  "train/2003_2.npz": {
+   "md5": "53157c051b47c96dbf4ddd7020ec23d3",
+   "bytes": 3159404
+  },
+  "train/2003_3.npz": {
+   "md5": "5cca0f1ada575fb1b80367be62cbbd36",
+   "bytes": 3159404
+  },
+  "train/2003_4.npz": {
+   "md5": "fa66f5dd929b99d80d403fb3cabc8380",
+   "bytes": 3159404
+  },
+  "train/2003_5.npz": {
+   "md5": "cd533964e8955297b0c963f4e7be2300",
+   "bytes": 3159404
+  },
+  "train/2003_6.npz": {
+   "md5": "a582154390e22eac709869c523cf289c",
+   "bytes": 3159404
+  },
+  "train/2003_7.npz": {
+   "md5": "8c2a61379983efe40e1303410396f0d6",
+   "bytes": 3159404
+  },
+  "train/2004_0.npz": {
+   "md5": "ad38f3eee29c202124a9390a11d54389",
+   "bytes": 3159404
+  },
+  "train/2004_1.npz": {
+   "md5": "6a4539574af99f7931e0ca4ad39ce1b0",
+   "bytes": 3159404
+  },
+  "train/2004_2.npz": {
+   "md5": "e7aeeb66f1cf940a12e5ee0c0f6f1eab",
+   "bytes": 3159404
+  },
+  "train/2004_3.npz": {
+   "md5": "ae415c2bedd6faf67f57d369c7bca643",
+   "bytes": 3159404
+  },
+  "train/2004_4.npz": {
+   "md5": "06097dc970178dca8796cf8443fe87f1",
+   "bytes": 3159404
+  },
+  "train/2004_5.npz": {
+   "md5": "f463414fc42b8c2fbf237c765a5a7a22",
+   "bytes": 3159404
+  },
+  "train/2004_6.npz": {
+   "md5": "46d7364eba2ff2f1adbf834e39746a30",
+   "bytes": 3159404
+  },
+  "train/2004_7.npz": {
+   "md5": "b702c19d77ff266b8656dc7e5b5b6963",
+   "bytes": 3159404
+  },
+  "train/2005_0.npz": {
+   "md5": "83e313ffd41b1888d89f7dd0f1c5b348",
+   "bytes": 3159404
+  },
+  "train/2005_1.npz": {
+   "md5": "ef42d9347a0a826be7075a3d04cfe541",
+   "bytes": 3159404
+  },
+  "train/2005_2.npz": {
+   "md5": "b0cdb19627e53c5cd6128685f07f693b",
+   "bytes": 3159404
+  },
+  "train/2005_3.npz": {
+   "md5": "a983db17ef00b736a5cf83b0d2e140ca",
+   "bytes": 3159404
+  },
+  "train/2005_4.npz": {
+   "md5": "f92799aecd53746cccd0c2d68827e97e",
+   "bytes": 3159404
+  },
+  "train/2005_5.npz": {
+   "md5": "bceba8ee89c1c568346b7e8606e06742",
+   "bytes": 3159404
+  },
+  "train/2005_6.npz": {
+   "md5": "909346cb3f98e74b2597d830d35e58c3",
+   "bytes": 3159404
+  },
+  "train/2005_7.npz": {
+   "md5": "c3c622422b3304ccfd0b4185b2f1003b",
+   "bytes": 3159404
+  },
+  "train/2006_0.npz": {
+   "md5": "15f057c3551591d9bfaec3fdf0266200",
+   "bytes": 3159404
+  },
+  "train/2006_1.npz": {
+   "md5": "ab5a5ce29a1b751a8165f3150d96ea0e",
+   "bytes": 3159404
+  },
+  "train/2006_2.npz": {
+   "md5": "eccc7ca54a560241ea4b73a05b729200",
+   "bytes": 3159404
+  },
+  "train/2006_3.npz": {
+   "md5": "e45dc3b38c797844196a9b7d68a96f0c",
+   "bytes": 3159404
+  },
+  "train/2006_4.npz": {
+   "md5": "baaf251156ec84e0627c850756a2d70b",
+   "bytes": 3159404
+  },
+  "train/2006_5.npz": {
+   "md5": "e5585cd8ca9094c994b8d91fa3889a62",
+   "bytes": 3159404
+  },
+  "train/2006_6.npz": {
+   "md5": "0c1e8cf4ac698a03a61489a7740c5655",
+   "bytes": 3159404
+  },
+  "train/2006_7.npz": {
+   "md5": "126057918a7aadce7afd89c0e6b0b3ea",
+   "bytes": 3159404
+  },
+  "train/2007_0.npz": {
+   "md5": "c3c432363e36fa9464754d01e672485e",
+   "bytes": 3159404
+  },
+  "train/2007_1.npz": {
+   "md5": "6468c1808a9588b858ddc25837fb1788",
+   "bytes": 3159404
+  },
+  "train/2007_2.npz": {
+   "md5": "ffd29de8ea2b464c02a2376ee1892e5a",
+   "bytes": 3159404
+  },
+  "train/2007_3.npz": {
+   "md5": "7690d80b89e1493ca3981e74b30fb91e",
+   "bytes": 3159404
+  },
+  "train/2007_4.npz": {
+   "md5": "9a99cd64c872ce54af37a826f6645de6",
+   "bytes": 3159404
+  },
+  "train/2007_5.npz": {
+   "md5": "fa8a3360d260d4aaa5b4b4f1261b5016",
+   "bytes": 3159404
+  },
+  "train/2007_6.npz": {
+   "md5": "60e3d4cc663c3e364933368d6f051764",
+   "bytes": 3159404
+  },
+  "train/2007_7.npz": {
+   "md5": "68b36f5635fd0dcf938a147b950df0b3",
+   "bytes": 3159404
+  },
+  "train/2008_0.npz": {
+   "md5": "16b76db940e1f19531517c5237b86464",
+   "bytes": 3159404
+  },
+  "train/2008_1.npz": {
+   "md5": "97e72b78ff2546257b120696d9c0b100",
+   "bytes": 3159404
+  },
+  "train/2008_2.npz": {
+   "md5": "5fc8b66a58a5adb0c100eb12476b2126",
+   "bytes": 3159404
+  },
+  "train/2008_3.npz": {
+   "md5": "7ce3bba85f09f7ca3fb36b47f7f4121b",
+   "bytes": 3159404
+  },
+  "train/2008_4.npz": {
+   "md5": "b7b20f826048ad3398b6311734eede19",
+   "bytes": 3159404
+  },
+  "train/2008_5.npz": {
+   "md5": "7653acbae2eef10fd272038edb96f690",
+   "bytes": 3159404
+  },
+  "train/2008_6.npz": {
+   "md5": "8410b18f395d938c26c478290d226834",
+   "bytes": 3159404
+  },
+  "train/2008_7.npz": {
+   "md5": "ab61923cef0e2984c559104dda308d0f",
+   "bytes": 3159404
+  },
+  "train/2009_0.npz": {
+   "md5": "9fd7400cd736344ae9ca935727fb162c",
+   "bytes": 3159404
+  },
+  "train/2009_1.npz": {
+   "md5": "3c16858226c26a13d8e127c1dd893ff7",
+   "bytes": 3159404
+  },
+  "train/2009_2.npz": {
+   "md5": "5a5d6ba30b676723f132dea6b832a425",
+   "bytes": 3159404
+  },
+  "train/2009_3.npz": {
+   "md5": "4e98846bb124710bd0754bdd935e50f2",
+   "bytes": 3159404
+  },
+  "train/2009_4.npz": {
+   "md5": "3d2d19bd7eef3d4180ea1d499c93b879",
+   "bytes": 3159404
+  },
+  "train/2009_5.npz": {
+   "md5": "2dd210da2cd5ca2a1993546a2a396941",
+   "bytes": 3159404
+  },
+  "train/2009_6.npz": {
+   "md5": "df2103cba6201a17560bcb0af83166d1",
+   "bytes": 3159404
+  },
+  "train/2009_7.npz": {
+   "md5": "5c3e4dc78314fb9262663c493949496d",
+   "bytes": 3159404
+  },
+  "train/2010_0.npz": {
+   "md5": "e4c73aa54e7e33a9e9d0118a979b4a99",
+   "bytes": 3159404
+  },
+  "train/2010_1.npz": {
+   "md5": "be879e0bf9510fe137c83fa5e64c32cc",
+   "bytes": 3159404
+  },
+  "train/2010_2.npz": {
+   "md5": "40098c79e6ab1ef6271433faef7dc7b8",
+   "bytes": 3159404
+  },
+  "train/2010_3.npz": {
+   "md5": "9f0d628a0c60b360aeab04f76b07219f",
+   "bytes": 3159404
+  },
+  "train/2010_4.npz": {
+   "md5": "75fdb439c8331b3073b9ffd8321adf1f",
+   "bytes": 3159404
+  },
+  "train/2010_5.npz": {
+   "md5": "ada9e66ca78130be5ae9e45b01307ba3",
+   "bytes": 3159404
+  },
+  "train/2010_6.npz": {
+   "md5": "3773b0cdd2aed6c2da731d127bdd7900",
+   "bytes": 3159404
+  },
+  "train/2010_7.npz": {
+   "md5": "7a3c2dbdf8ec234380736e0788d9c4e7",
+   "bytes": 3159404
+  },
+  "train/climatology.npz": {
+   "md5": "a0b8eb017ad58cca2e71ec9f4626d376",
+   "bytes": 7326
+  },
+  "val/2011_0.npz": {
+   "md5": "7e4d251e5f8e7052917cebd8bfa3512f",
+   "bytes": 3159404
+  },
+  "val/2011_1.npz": {
+   "md5": "7793bfa95cb3ef104aa343c3a39c565b",
+   "bytes": 3159404
+  },
+  "val/2011_2.npz": {
+   "md5": "fa20bdaa58915fbea47987a67278434c",
+   "bytes": 3159404
+  },
+  "val/2011_3.npz": {
+   "md5": "3a5d6029cacb689fe4ebece3c70d5394",
+   "bytes": 3159404
+  },
+  "val/2011_4.npz": {
+   "md5": "afc185e33d7ea5803e22972c858dfb5a",
+   "bytes": 3159404
+  },
+  "val/2011_5.npz": {
+   "md5": "d5c04e5d9491964362612065bebb59b8",
+   "bytes": 3159404
+  },
+  "val/2011_6.npz": {
+   "md5": "65d362ac15c8c1ab7f1f81aa1845c5bd",
+   "bytes": 3159404
+  },
+  "val/2011_7.npz": {
+   "md5": "2022fbaa7ed4099b441cdbeca83c41e5",
+   "bytes": 3159404
+  },
+  "val/2012_0.npz": {
+   "md5": "b6a5cba28785e8c348cc7dd43b583bb8",
+   "bytes": 3159404
+  },
+  "val/2012_1.npz": {
+   "md5": "a7715cc45a844656632bdd9d9cbdcd3d",
+   "bytes": 3159404
+  },
+  "val/2012_2.npz": {
+   "md5": "c76e8785141c47ec6ac7b1367692b24d",
+   "bytes": 3159404
+  },
+  "val/2012_3.npz": {
+   "md5": "f36cbd6682dbaacc89c98bdce8e7b098",
+   "bytes": 3159404
+  },
+  "val/2012_4.npz": {
+   "md5": "50f0397daa526a985fa804f972b728a7",
+   "bytes": 3159404
+  },
+  "val/2012_5.npz": {
+   "md5": "e6dab578ef1f684885977713a7354204",
+   "bytes": 3159404
+  },
+  "val/2012_6.npz": {
+   "md5": "0916245ddf7e9f32c2a7ef37083ebbb3",
+   "bytes": 3159404
+  },
+  "val/2012_7.npz": {
+   "md5": "4ebab7f40fb35b065480074c463da15c",
+   "bytes": 3159404
+  },
+  "val/2013_0.npz": {
+   "md5": "dd8bc1e4f113d522de532a4c7ce7bdbb",
+   "bytes": 3159404
+  },
+  "val/2013_1.npz": {
+   "md5": "8ee85381f0a21a2354856506d467eea3",
+   "bytes": 3159404
+  },
+  "val/2013_2.npz": {
+   "md5": "18c9300f93b75eed1da23cad17949906",
+   "bytes": 3159404
+  },
+  "val/2013_3.npz": {
+   "md5": "6db53cfcea7d4fb5ee4bddd2f97086ea",
+   "bytes": 3159404
+  },
+  "val/2013_4.npz": {
+   "md5": "fb06c02155837db58002f6724100ee8e",
+   "bytes": 3159404
+  },
+  "val/2013_5.npz": {
+   "md5": "bd5c5a1dbb72c2383e6194e6ea8ee2af",
+   "bytes": 3159404
+  },
+  "val/2013_6.npz": {
+   "md5": "b0bb89999c9c72cc8094548a52253c4b",
+   "bytes": 3159404
+  },
+  "val/2013_7.npz": {
+   "md5": "c04c5651a790a039c8c4b1855fbf7c25",
+   "bytes": 3159404
+  },
+  "val/2014_0.npz": {
+   "md5": "27b8d91a45c34837f8fe6912a3ac8c7c",
+   "bytes": 3159404
+  },
+  "val/2014_1.npz": {
+   "md5": "15c27c89d2fe09281ae0d26a9a2f9257",
+   "bytes": 3159404
+  },
+  "val/2014_2.npz": {
+   "md5": "637fcc96d27c1c4b2ff00c9edf4085a4",
+   "bytes": 3159404
+  },
+  "val/2014_3.npz": {
+   "md5": "4fe5e69f5b8244a0be75acaae0c444d0",
+   "bytes": 3159404
+  },
+  "val/2014_4.npz": {
+   "md5": "7ad5f61cd2439c0e7e8675de4eeec6b6",
+   "bytes": 3159404
+  },
+  "val/2014_5.npz": {
+   "md5": "c9c668f7cd55d09e1b9a3b5c495a02f0",
+   "bytes": 3159404
+  },
+  "val/2014_6.npz": {
+   "md5": "985568d3bd1aea1d30421ffa7ae37599",
+   "bytes": 3159404
+  },
+  "val/2014_7.npz": {
+   "md5": "3370717e344fb51250560cad68604617",
+   "bytes": 3159404
+  },
+  "val/climatology.npz": {
+   "md5": "9b7a5f52283d2b01d72c66f2af14ab25",
+   "bytes": 7326
+  }
+ }
+}
