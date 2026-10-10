@@ -1,0 +1,59 @@
+# Hazard experiment, Option A: frozen encoders + hazard heads
+
+Code: `src/climax_hazards/hazard_data.py`, `src/climax_hazards/hazard_model.py`, `scripts/mtech/run_hazard_experiment.py`.
+Kaggle notebook: `notebooks/04_hazard_heads.ipynb`. Tests: `tests/mtech/test_hazard.py`.
+
+## Research question
+Does a ClimaX encoder trained with the hypsometric physics loss (λ = 0.001) yield better extreme-event detection than the same encoder trained without it (λ = 0)
+when both feed identical hazard heads? And do either beat simple, honest baselines?
+
+Option A uses the two existing internship-setup checkpoints, so **no new weather training** is needed. This was chosen because GPU budget is limited.
+The corrected 6 × 6 grid and fine-tuning are deferred (see "Later").
+
+## Task definition (my implementation choices)
+- **Input:** the 17 ERA5 fields at **00 UTC on day D**, normalised with the train statistics. Original 6 × 5 grid, edge-padded in memory to the models' 6 × 6.
+- **Target:** hazard label on the UTC day **D+3**, i.e. the day containing t + 72 h, the encoder's trained lead time (`lead_time = 0.72`).
+- **Labels:** primary definitions from `HAZARD_DEFINITIONS.md`:
+  - heatwave: Mar–Jun, train-period p90 Tmax, ≥ 3 days, land;
+  - extreme wind: p99 of daily max wind speed;
+  - extreme precipitation: IMD, p95 of wet days, boxes with ≥ 50 % coverage.
+- **Samples:** one per day: train 11 680, val 1 460, test 1 460. Undefined targets (NaN) are excluded from every loss and metric.
+- **The duplicated longitude column** gets NaN targets: it is never trained or scored.
+
+## Model (tensor shapes for the internship encoder)
+```
+x (B, 17, 6, 6) --frozen ClimaX.forward_encoder (lead 72 h)--> tokens (B, 9, 1024)   [cached once]
+tokens --head_k: Linear(1024, 256) → GELU → Dropout(0.1) → Linear(256, 4)--> (B, 9, 4)
+       --unpatchify (same token order as ClimaX, unit-tested)--> logits_k (B, 1, 6, 6)
+```
+- There is one head per hazard (~0.26 M parameters each). The weather head is untouched, so weather forecasts are unchanged.
+- **Loss:** per-hazard BCE-with-logits on valid cells, with the positive class weighted by the train negative/positive ratio (capped at 50), averaged over hazards.
+- **Training:** AdamW (lr 1e-3, wd 1e-4), batch 256, ≤ 40 epochs, early stopping (patience 8) on mean validation PR-AUC. **3 seeds** per encoder.
+- With a frozen encoder and disjoint heads, joint training equals separate training, so there is no negative transfer by construction.
+  Multi-task interaction (and possible negative transfer) only arises when the encoder is fine-tuned.
+
+## Baselines (identical samples, information available at issue time only)
+| Baseline | Definition |
+|---|---|
+| climatology | train-period event frequency for the target calendar day (± 15 d), per cell |
+| persistence | threshold exceedance on the latest fully observed day: D−1 (ERA5 heat, wind), D−2 (IMD rain, because of its 03 UTC day boundary) |
+| logistic regression | per hazard and cell, on the same flattened normalised inputs; C ∈ {0.01, 0.1, 1}, chosen on val PR-AUC; class-balanced |
+
+## Evaluation
+- Pooled over valid cell-days of the **test** split (2015–2018).
+- **PR-AUC** is the primary metric; its no-skill level equals the prevalence. Also reported: ROC-AUC, Brier score, and precision / recall / F1 with the confusion counts.
+- The decision threshold maximises F1 on **val** and is applied unchanged to test.
+- Heatwave prevalence rises from 6.5 % (val) to 9.2 % (test) because of the warming trend. Threshold-free PR-AUC is therefore the fairest comparison;
+  F1 at the val threshold is sensitive to this shift.
+
+## Status
+Pipeline verified locally on CPU end to end (real data, real IMD labels, synthetic random-weight encoders). **No real results yet**: the real checkpoints are on Kaggle.
+
+## Limitations
+- The 5.625° grid (~625 km) gives box-mean extremes only. 5 real longitude columns. Precipitation has only 9 IMD-covered boxes.
+- One encoder per λ (seed 42). Head seeds measure head variance only, not encoder-training variance.
+- The internship encoders were trained on the padded grid (duplicated column), and from scratch, not from pretrained ClimaX.
+
+## Later (after Review 2 or with more compute)
+Corrected 6 × 6 grid encoders; fine-tuning the encoder with `L_weather + λ L_hyps + Σ λ_k L_hazard_k` (where negative transfer becomes testable);
+several encoder seeds; pretrained ClimaX initialisation with name-aware weight loading.

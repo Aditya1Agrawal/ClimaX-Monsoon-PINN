@@ -19,6 +19,7 @@ it shifts forecast alignment by one day.
 from __future__ import annotations
 
 import os
+import warnings
 from dataclasses import asdict, dataclass
 from typing import Optional, Tuple
 
@@ -122,7 +123,9 @@ def precip_labels(data_dir, imd_dir, cfg: PrecipConfig = PrecipConfig(), split_y
         thr = np.full(r_tr.shape[1:], cfg.absolute_mm, dtype=np.float32)
     else:
         wet = np.where(r_tr >= cfg.wet_day_mm, r_tr, np.nan)
-        thr = np.nanpercentile(wet, cfg.percentile, axis=0).astype(np.float32)
+        with warnings.catch_warnings():  # boxes without IMD coverage are all-NaN -> NaN threshold
+            warnings.simplefilter("ignore", RuntimeWarning)
+            thr = np.nanpercentile(wet, cfg.percentile, axis=0).astype(np.float32)
 
     ls = L.LabelSet("extreme_precip", asdict(cfg), {"rain_threshold_mm": thr})
     for s, (dates, r, cov) in daily.items():

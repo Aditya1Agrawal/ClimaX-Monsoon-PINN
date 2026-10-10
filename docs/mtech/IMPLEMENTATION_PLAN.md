@@ -14,7 +14,8 @@ The original internship code (`src/climax/**`, `configs/regional_india.yaml`) st
 | Step C corrected grid | Done locally: `regional_climax_dataset_6x6_corrected/` (lon 67.5–95.625°E, orography fixed, timestamps). Columns 73.125–95.625 are byte-identical to the original in all 320 shards. MD5 manifest: `docs/mtech/corrected_dataset_manifest.json`. **Upload to Kaggle pending (you)** |
 | Step D labels | Heatwave (percentile + IMD-style, March–June), extreme wind and extreme precipitation (IMD 0.25°, 9 covered boxes) done; notebook `02_labels_eda.ipynb`; see `HAZARD_DEFINITIONS.md`. IMD day convention still to verify |
 | Step F ablation | λ=0 vs λ=0.001, seed 42, padded grid: physics run better on 17/17 variables (1.3–4.0 % RMSE, `results/README.md`). **Needs seeds 43/44 and real-column re-scoring**; notebook `03_train_weather_ablation.ipynb` prepared (smoke-test default) |
-| 5–9 (multi-task) | Not started |
+| Option A hazard heads (chosen 2026-10-10) | Frozen λ=0 / λ=0.001 encoders + per-hazard heads vs climatology, persistence and logistic baselines; `docs/mtech/HAZARD_EXPERIMENT.md`, notebook `04_hazard_heads.ipynb`. Verified locally with synthetic encoders. **Kaggle run pending** |
+| Corrected-grid encoders, fine-tuning, more seeds | Deferred until after Review 2 or more compute |
 
 ## Decisions taken (2026-10-10)
 
