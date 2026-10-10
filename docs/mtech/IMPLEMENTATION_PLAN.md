@@ -10,9 +10,17 @@ The original internship code (`src/climax/**`, `configs/regional_india.yaml`) st
 |---|---|
 | 1 Audit | Done: `docs/mtech/AUDIT_REPORT.md` |
 | 2 Data/checkpoint access | Notebook `notebooks/01_inspect_data_and_checkpoints.ipynb` written and dry-run locally (real data + synthetic checkpoint). **Kaggle run pending** |
-| 3–9 | Not started |
+| Step B evaluation | `scripts/mtech/evaluate_forecast.py` done. Persistence and climatology baselines measured (`docs/mtech/results/`). **Checkpoint same-sample evaluation pending (Kaggle)** |
+| Step C corrected grid | Done locally: `regional_climax_dataset_6x6_corrected/` (lon 67.5–95.625°E, orography fixed, timestamps). Columns 73.125–95.625 are byte-identical to the original in all 320 shards. MD5 manifest: `docs/mtech/corrected_dataset_manifest.json`. **Upload to Kaggle pending (you)** |
+| Step D labels | Heatwave (percentile + IMD-style, March–June) and extreme wind done; notebook `02_labels_eda.ipynb`; see `HAZARD_DEFINITIONS.md`. Precipitation blocked on data |
+| 5–9 | Not started |
 
-## Decisions needed from you
+## Decisions taken (2026-10-10)
+
+5.625° first; corrected 6×6 grid as the main dataset (the internship padded setup is kept as "baseline-as-run"); IMD rainfall as the precipitation label
+source once you download it; the branch is pushed to GitHub.
+
+## Decisions originally needed from you
 
 1. **Grid resolution for the hazard work.**
    - A. Stay at 5.625° (cheap; matches the checkpoints; ~20 land cells; hazards only as grid-box-relative extremes). *Recommended as the first iteration.*

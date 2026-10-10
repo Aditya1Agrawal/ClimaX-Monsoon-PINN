@@ -107,7 +107,7 @@ Notebook 01 checks the Kaggle copy against the same manifest. Its file listing i
 | Hazard | Inputs available | Labels | Feasible now? | Key limitation |
 |---|---|---|---|---|
 | Extreme precipitation | **No precip variable** anywhere locally | none | **No** | Needs IMD 0.25° gridded daily rainfall (Pai et al. 2014; observational, land-only, 03–03 UTC day) or WeatherBench 5.625° `total_precipitation` (ERA5, same grid and timeline, model-based). Do not derive it from T, Z or wind |
-| Heatwave | hourly t2m, 1979–2018 | derive daily Tmax (UTC day) | **Yes**, percentile + duration | IMD absolute criteria (≥40 °C plains, departure ≥4.5 °C, or ≥45 °C) are station-scale; 625 km box means (incl. Tibet and ocean) will rarely meet them. Expect a train-period calendar-day percentile with ≥3-day duration, on land cells only |
+| Heatwave | hourly t2m, 1979–2018 | derive daily Tmax (UTC day) | **Yes**, percentile + duration | IMD criteria (≥40 °C plains, departure ≥4.5 °C, or ≥45 °C) are station-scale. *Update after measuring:* box-mean Tmax does reach ≥40 °C on ~3 % of train land cell-days, but the full IMD-style rule fires on only ~0.3 % of them. The primary label is therefore a train-period calendar-day percentile with ≥3-day duration, on land cells only; the IMD-style label is kept for comparison (see `HAZARD_DEFINITIONS.md`) |
 | Extreme wind | hourly u10, v10 | `sqrt(u²+v²)`, percentile | **Yes**, as "extreme grid-scale 10 m wind" | Box-mean wind, no gusts; ocean cells dominate. **Not** cyclone labels (needs IBTrACS) |
 | Flood / cyclone / landslide | — | none | No | Need GFD/DFO, IBTrACS, NASA GLC and environmental inputs |
 

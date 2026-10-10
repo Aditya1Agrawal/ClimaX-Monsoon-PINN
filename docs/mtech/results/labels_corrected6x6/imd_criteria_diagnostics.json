@@ -1,0 +1,8 @@
+{
+ "train_land_tmax_c_p99": 42.109134674072266,
+ "train_land_tmax_c_max": 48.99444580078125,
+ "train_land_cell_days_tmax_ge_40c": 7594,
+ "train_land_cell_days_tmax_ge_45c": 189,
+ "train_land_cell_days_departure_ge_4p5c": 13567,
+ "n_land_cells": 23
+}

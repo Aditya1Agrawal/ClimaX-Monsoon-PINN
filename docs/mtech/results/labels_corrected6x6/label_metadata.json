@@ -1,0 +1,124 @@
+{
+ "heatwave_pct": {
+  "name": "heatwave_pct",
+  "config": {
+   "percentile": 90.0,
+   "window_days": 7,
+   "min_duration": 3,
+   "land_fraction_min": 0.5,
+   "season_months": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "imd_plains_c": 40.0,
+   "imd_hills_c": 30.0,
+   "imd_hill_orography_m": 1500.0,
+   "imd_departure_c": 4.5,
+   "imd_absolute_c": 45.0,
+   "imd_min_duration": 2
+  },
+  "dates_encoding": "int64 days since 1970-01-01 (UTC days)",
+  "label_encoding": "1 event, 0 no event, NaN undetermined/masked",
+  "thresholds_from": "train split only",
+  "prevalence": {
+   "train": {
+    "n_valid": 89792,
+    "n_event": 4788,
+    "n_undetermined": 330976,
+    "prevalence": 0.05332323592302209
+   },
+   "val": {
+    "n_valid": 11224,
+    "n_event": 733,
+    "n_undetermined": 41372,
+    "prevalence": 0.06530648610121169
+   },
+   "test": {
+    "n_valid": 11224,
+    "n_event": 1029,
+    "n_undetermined": 41372,
+    "prevalence": 0.09167854597291518
+   }
+  }
+ },
+ "heatwave_imd": {
+  "name": "heatwave_imd",
+  "config": {
+   "percentile": 90.0,
+   "window_days": 7,
+   "min_duration": 3,
+   "land_fraction_min": 0.5,
+   "season_months": [
+    3,
+    4,
+    5,
+    6
+   ],
+   "imd_plains_c": 40.0,
+   "imd_hills_c": 30.0,
+   "imd_hill_orography_m": 1500.0,
+   "imd_departure_c": 4.5,
+   "imd_absolute_c": 45.0,
+   "imd_min_duration": 2,
+   "orography_available": true
+  },
+  "dates_encoding": "int64 days since 1970-01-01 (UTC days)",
+  "label_encoding": "1 event, 0 no event, NaN undetermined/masked",
+  "thresholds_from": "train split only",
+  "prevalence": {
+   "train": {
+    "n_valid": 89792,
+    "n_event": 800,
+    "n_undetermined": 330976,
+    "prevalence": 0.008909479686386316
+   },
+   "val": {
+    "n_valid": 11224,
+    "n_event": 78,
+    "n_undetermined": 41372,
+    "prevalence": 0.006949394155381326
+   },
+   "test": {
+    "n_valid": 11224,
+    "n_event": 107,
+    "n_undetermined": 41372,
+    "prevalence": 0.009533143264433356
+   }
+  }
+ },
+ "extreme_wind": {
+  "name": "extreme_wind",
+  "config": {
+   "percentile": 99.0,
+   "monthly": false,
+   "absolute_ms": null,
+   "min_duration": 1,
+   "land_fraction_min": null
+  },
+  "dates_encoding": "int64 days since 1970-01-01 (UTC days)",
+  "label_encoding": "1 event, 0 no event, NaN undetermined/masked",
+  "thresholds_from": "train split only",
+  "prevalence": {
+   "train": {
+    "n_valid": 420480,
+    "n_event": 4212,
+    "n_undetermined": 288,
+    "prevalence": 0.010017123287671233
+   },
+   "val": {
+    "n_valid": 52560,
+    "n_event": 437,
+    "n_undetermined": 36,
+    "prevalence": 0.008314307458143074
+   },
+   "test": {
+    "n_valid": 52560,
+    "n_event": 474,
+    "n_undetermined": 36,
+    "prevalence": 0.009018264840182649
+   }
+  }
+ }
+}
