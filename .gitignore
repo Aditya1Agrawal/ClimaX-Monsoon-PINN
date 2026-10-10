@@ -160,3 +160,4 @@ regional_climax_dataset.zip
 # M.Tech derived datasets and local outputs
 regional_climax_dataset_6x6_corrected/
 outputs/
+raw_imd_rainfall/

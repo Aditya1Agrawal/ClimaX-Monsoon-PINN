@@ -1,0 +1,5 @@
+file,epoch,exp_epoch,global_step,exp_step,physics_lambda,pretrained_path,match
+epoch_011.ckpt,11,11,49104,49104,0.001,'',True
+epoch_016.ckpt,16,16,69564,69564,0.001,'',True
+epoch_017.ckpt,17,17,73656,73656,0.001,'',True
+last.ckpt,19,19,81840,81840,0.001,'',True

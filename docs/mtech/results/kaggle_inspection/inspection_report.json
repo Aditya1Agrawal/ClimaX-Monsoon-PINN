@@ -1,0 +1,30 @@
+{
+ "data_dir": "/kaggle/input/datasets/agrawaladi/climax-indian-monsoon-regional/regional_climax_dataset",
+ "checkpoints": [
+  "/kaggle/input/datasets/agrawaladi/checkpoints-for-regional-forecasting/epoch_011.ckpt",
+  "/kaggle/input/datasets/agrawaladi/checkpoints-for-regional-forecasting/epoch_016.ckpt",
+  "/kaggle/input/datasets/agrawaladi/checkpoints-for-regional-forecasting/epoch_017.ckpt",
+  "/kaggle/input/datasets/agrawaladi/checkpoints-for-regional-forecasting/last.ckpt"
+ ],
+ "dataset_issues": [],
+ "padding": {
+  "lon": [
+   73.125,
+   78.75,
+   84.375,
+   90.0,
+   95.625
+  ],
+  "n_lon": 5,
+  "lon_spacing_unique": [
+   5.625
+  ],
+  "last_two_columns_identical_in_sample": false,
+  "looks_padded": false
+ },
+ "load_report": {
+  "missing_in_checkpoint": [],
+  "unexpected_in_checkpoint": [],
+  "shape_mismatch": {}
+ }
+}

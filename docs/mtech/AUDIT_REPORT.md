@@ -68,7 +68,12 @@ Notebook 01 checks the Kaggle copy against the same manifest. Its file listing i
 * Kaggle `checkpoints-for-regional-forecasting`: `epoch_011.ckpt`, `epoch_016.ckpt`, `epoch_017.ckpt`, `last.ckpt`, about 1.29 GB each.
   The size fits weights plus AdamW state (3 × 430 MB). The filenames are exactly the top-3 + last of the logged physics run.
   That is strong but not conclusive. Notebook 01 compares the stored `epoch` and `global_step` with the log
-  (49104 / 69564 / 73656 / 81840) and prints the stored `physics_lambda` and `pretrained_path`. **UNVERIFIED until notebook 01 runs on Kaggle.**
+  (49104 / 69564 / 73656 / 81840) and prints the stored `physics_lambda` and `pretrained_path`.
+  **VERIFIED on Kaggle (2026-10-10, `docs/mtech/results/kaggle_inspection/`):** all four checkpoints match the logged epoch and global step exactly.
+  All store `physics_lambda=0.001`, `pretrained_path=''` (this confirms training from scratch) and `root_dir=/kaggle/working/regional_climax_dataset_6x6`.
+  The stored `ModelCheckpoint` scores equal the logged `val/w_rmse` (103.62589 / 103.58346 / 103.68472), and `best_model_path` = `epoch_016.ckpt`.
+  All four load **strictly** into the `regional_india.yaml` architecture (no missing, unexpected or mis-shaped keys).
+  The Kaggle dataset is the unpadded 6 × 5 grid with no issues found. All four checkpoints therefore come from the single λ=0.001 physics run; none is a baseline.
 * Strict-loading the internship architecture works on a synthetic checkpoint with the same layout (local test).
 * Pretrained-loading hazard, relevant for the extension: `load_pretrained_weights` keeps keys whose **shapes** match.
   `token_embeds.0…16` of the 48-variable pretrained model match in shape, so they would load onto **different variables**
