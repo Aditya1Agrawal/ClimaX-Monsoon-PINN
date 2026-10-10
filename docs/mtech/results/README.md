@@ -9,19 +9,31 @@ Only numbers produced by code in this repository are recorded here. Each file st
 | `kaggle_inspection/` | Output of notebook 01 on Kaggle: checkpoint metadata and provenance (all four match the internship log), strict-load report, and a **64-sample** val forward smoke test of `epoch_016.ckpt` (a pipeline check, not an evaluation) | `notebooks/01_inspect_data_and_checkpoints.ipynb` |
 | `labels_corrected6x6/` | Hazard label prevalence, threshold sensitivity, seasonality, maps, IMD diagnostics | `scripts/mtech/make_labels.py` |
 
-## Reference point for the internship checkpoint (indicative only)
+## Internship checkpoint `epoch_016.ckpt`: same-sample test evaluation (measured on Kaggle, 2026-10-10)
 
-Logged internship test metrics (`epoch_016.ckpt`, 6×6 padded grid **including** the duplicated column, ClimaX metric) compared with the baselines
-on the 5 real columns (original grid). These are not yet a same-sample comparison: run `evaluate_forecast.py --checkpoint` on Kaggle for that.
+Files: `eval_epoch016_orig6x5_test.csv` (full output) and `eval_epoch016_skill_summary.csv`. Test 2015–2018, 72 h lead, n = 32 736 pairs.
+"real" = the 5 real longitude columns; "incl_dup" = the internship's padded 6×6 grid, including the duplicated column.
 
-| variable | internship log | persistence | climatology |
-|---|---|---|---|
-| z500 (m² s⁻²) | 233.6 | 282.0 | 272.8 |
-| z850 | 233.6 | 282.3 | 235.4 |
-| z925 | 243.2 | 294.1 | 242.7 |
-| t850 (K) | 1.45 | 1.84 | 1.63 |
-| t2m (K) | 2.14 | 2.47 | 2.28 |
-| u10 (m/s) | 1.74 | 2.15 | 1.77 |
-| v10 (m/s) | 1.58 | 2.12 | 1.64 |
+**Pipeline check:** the `incl_dup` scores reproduce the internship's logged ClimaX test metrics to ≤ 5e-5 (z500 233.6048, t2m 2.1399, z925 243.1508).
 
-The model beats persistence everywhere but is close to climatology for low-level geopotential and the 10 m winds. No skill claim should be made until the same-sample evaluation exists.
+| variable | model (real) | persistence | climatology | skill vs clim | skill vs pers | duplicate-column effect |
+|---|---|---|---|---|---|---|
+| t2m (K) | 2.134 | 2.469 | 2.284 | 6.6 % | 13.6 % | +0.3 % |
+| u10 (m/s) | 1.697 | 2.151 | 1.767 | 4.0 % | 21.1 % | +2.7 % |
+| v10 (m/s) | 1.603 | 2.116 | 1.637 | 2.1 % | 24.2 % | −1.5 % |
+| t500 (K) | 1.685 | 2.113 | 1.882 | 10.5 % | 20.3 % | −0.1 % |
+| t850 (K) | 1.455 | 1.842 | 1.632 | 10.9 % | 21.0 % | −0.5 % |
+| z50 (m² s⁻²) | 264.8 | 266.7 | 344.5 | 23.1 % | 0.7 % | −0.3 % |
+| z250 | 404.4 | 475.1 | 510.5 | 20.8 % | 14.9 % | −1.3 % |
+| z500 | 237.4 | 282.0 | 272.8 | 13.0 % | 15.8 % | −1.6 % |
+| z700 | 214.1 | 260.2 | 227.2 | 5.8 % | 17.7 % | +0.9 % |
+| z850 | 228.2 | 282.3 | 235.4 | 3.1 % | 19.2 % | +2.4 % |
+| z925 | 236.7 | 294.1 | 242.7 | 2.5 % | 19.5 % | +2.7 % |
+
+Skill = 1 − RMSE_model / RMSE_baseline. All 17 variables are in the CSV.
+
+Interpretation:
+- The model beats persistence and train-climatology on all 17 variables. The margin over climatology is small (2–6 %) for near-surface fields and the lower-tropospheric geopotential.
+- The duplicated column changes the reported RMSE by up to ±2.7 %. The internship's headline numbers should be quoted from the "real" columns.
+- No statement about the physics loss is possible: this is the λ=0.001 model, and no λ=0 model exists yet.
+- Climatology has no ACC by construction (its anomaly is zero).

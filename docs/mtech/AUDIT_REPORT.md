@@ -26,7 +26,8 @@ because no ablation exists.
 ## 2. Regional dataset
 
 Local copy `regional_climax_dataset/` is **byte-identical** (MD5) to the manifest in `docs/mtech/local_dataset_manifest.json`.
-Notebook 01 checks the Kaggle copy against the same manifest. Its file listing in the internship log has the same structure.
+**VERIFIED on Kaggle (2026-10-10):** the attached `climax-indian-monsoon-regional` dataset is byte-identical to this manifest
+(327 of 327 files, 0 missing, 0 extra, 0 MD5 mismatches). All locally computed results therefore use exactly the Kaggle data.
 
 * Source: WeatherBench 5.625° ERA5 (`raw_global_data/5.625deg`, 1979–2018, present locally, 78 GB). Only 5 variables:
   `2m_temperature`, `10m_u/v_component_of_wind`, `geopotential` and `temperature` on 13 levels, plus `constants.nc`.
@@ -128,7 +129,7 @@ but costs much more data and compute. **This is the main decision for you (see t
 | 1 | Model was trained from scratch, not pretrained | High (framing) | Correct the description; optionally add a name-aware pretrained init experiment |
 | 2 | No λ=0 baseline | High (claims) | Run a matched baseline before claiming any physics effect |
 | 3 | Duplicated fake longitude column in train/val/test metrics | Medium | Report on real columns; build a corrected 67.5–95.625°E grid |
-| 4 | No persistence/climatology baselines | Medium | Add to the evaluation script |
+| 4 | No persistence/climatology baselines | Medium | **Done**: `epoch_016` beats both on all 17 variables, by 2–23 % vs climatology (`results/README.md`) |
 | 5 | Selection metric dominated by geopotential | Medium | Also log normalised or per-variable selection metrics |
 | 6 | Orography zeros | Low (unused) | Fix the key in the new preprocessing |
 | 7 | Leap-year 31 Dec dropped; shards have no timestamps | Low | Handled by `shard_timestamps`; matters for heatwave durations |
