@@ -1,0 +1,59 @@
+{
+ "args": {
+  "data_dir": "/kaggle/input/datasets/agrawaladi/climax-indian-monsoon-regional/regional_climax_dataset",
+  "imd_dir": "/kaggle/input/datasets/agrawaladi/imd-rainfall",
+  "config": "configs/regional_india.yaml",
+  "checkpoint": [
+   "physics=/kaggle/input/datasets/agrawaladi/checkpoints-for-regional-forecasting/epoch_016.ckpt",
+   "nophysics=/kaggle/input/datasets/agrawaladi/checkpoints-for-regional-forecasting-baseline/epoch_016.ckpt"
+  ],
+  "hazards": [
+   "heatwave",
+   "extreme_wind",
+   "extreme_precip"
+  ],
+  "issue_hours": [
+   0
+  ],
+  "seeds": [
+   0,
+   1,
+   2
+  ],
+  "epochs": 40,
+  "no_logistic": false,
+  "max_samples": null,
+  "device": null,
+  "out_dir": "/kaggle/working/hazard_optionA"
+ },
+ "git_commit": "6d2e7b3d30426fbb1189071532863454cebb3457",
+ "lead_hours": 72,
+ "hazards": [
+  "heatwave",
+  "extreme_wind",
+  "extreme_precip"
+ ],
+ "n_samples": {
+  "train": 11680,
+  "val": 1460,
+  "test": 1460
+ },
+ "target_prevalence": {
+  "train": {
+   "heatwave": 0.052792008966207504,
+   "extreme_wind": 0.010026565752923489,
+   "extreme_precip": 0.020134547725319862
+  },
+  "val": {
+   "heatwave": 0.06731557101011276,
+   "extreme_wind": 0.008424908854067326,
+   "extreme_precip": 0.020590253174304962
+  },
+  "test": {
+   "heatwave": 0.08913934230804443,
+   "extreme_wind": 0.009317765943706036,
+   "extreme_precip": 0.017921147868037224
+  }
+ },
+ "elapsed_s": 993
+}

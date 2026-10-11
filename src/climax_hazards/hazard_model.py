@@ -106,7 +106,7 @@ def train_heads(feats_tr, y_tr, feats_va, y_va, hazards, img_size, patch_size, s
             opt.zero_grad()
             loss.backward()
             opt.step()
-            tot += float(loss) * len(idx)
+            tot += float(loss.detach()) * len(idx)
         prob = predict(heads, feats_va, device)
         aps = [average_precision(prob[:, k], y_va[:, k]) for k in range(len(hazards))]
         score = float(np.nanmean(aps))
@@ -210,3 +210,25 @@ def logistic_baseline(x_tr, y_tr, x_va, y_va, x_other: Dict[str, np.ndarray], Cs
         for s in out:
             out[s][:, k] = best[2][s]
     return out
+
+
+def paired_block_bootstrap(prob_a, prob_b, y, block: int = 7, n_boot: int = 1000, seed: int = 0) -> Dict[str, float]:
+    """Paired bootstrap of PR-AUC(a) - PR-AUC(b) over blocks of consecutive samples (days).
+
+    ``prob_*`` and ``y`` are (N, H, W) for one hazard, ordered in time. Resampling whole
+    blocks of ``block`` days keeps the day-to-day dependence of weather events.
+    """
+    rng = np.random.default_rng(seed)
+    n = len(y)
+    starts = np.arange(0, n, block)
+    diffs = []
+    for _ in range(n_boot):
+        pick = rng.choice(starts, size=len(starts), replace=True)
+        idx = np.concatenate([np.arange(s, min(s + block, n)) for s in pick])
+        a, b = average_precision(prob_a[idx], y[idx]), average_precision(prob_b[idx], y[idx])
+        if np.isfinite(a) and np.isfinite(b):
+            diffs.append(a - b)
+    diffs = np.array(diffs)
+    point = average_precision(prob_a, y) - average_precision(prob_b, y)
+    return {"pr_auc_diff": float(point), "ci_low": float(np.percentile(diffs, 2.5)), "ci_high": float(np.percentile(diffs, 97.5)),
+            "p_a_not_better": float(np.mean(diffs <= 0)), "n_boot": int(diffs.size), "block_days": block}

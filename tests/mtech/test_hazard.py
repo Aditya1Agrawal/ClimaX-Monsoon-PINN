@@ -69,3 +69,14 @@ def test_targets_and_climatology_alignment():
     assert y[0] == 1.0 and np.isnan(y[1])  # 2 Jan + 72 h = 5 Jan; 12 Jan is outside the split
     c = hd.climatology_probs(ls, "val", times, 72, window=0)[:, 0, 0, 0]
     assert c[0] == 1.0 and c[1] == 0.0
+
+
+def test_paired_block_bootstrap():
+    rng = np.random.default_rng(0)
+    y = (rng.random((200, 2, 2)) < 0.1).astype(np.float32)
+    good = y * 0.8 + rng.random(y.shape) * 0.2
+    noise = rng.random(y.shape).astype(np.float32)
+    same = hm.paired_block_bootstrap(good, good, y, n_boot=50)
+    assert same["pr_auc_diff"] == 0 and same["ci_low"] == 0 and same["ci_high"] == 0
+    better = hm.paired_block_bootstrap(good, noise, y, n_boot=200)
+    assert better["ci_low"] > 0 and better["p_a_not_better"] == 0

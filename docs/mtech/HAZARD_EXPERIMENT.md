@@ -47,7 +47,34 @@ tokens --head_k: Linear(1024, 256) → GELU → Dropout(0.1) → Linear(256, 4)-
   F1 at the val threshold is sensitive to this shift.
 
 ## Status
-Pipeline verified locally on CPU end to end (real data, real IMD labels, synthetic random-weight encoders). **No real results yet**: the real checkpoints are on Kaggle.
+- The pipeline was verified locally on CPU (real data, real IMD labels, synthetic encoders).
+- First Kaggle run on 2026-10-11, repo commit `6d2e7b3`, 16.5 min: final-best checkpoints only (λ=0.001 `epoch_016`, λ=0 `epoch_016`).
+  Results are in `docs/mtech/results/hazard_optionA/`.
+- **Next run:** all 8 checkpoints of both runs, plus a paired block bootstrap (7-day blocks) of the PR-AUC differences.
+
+## First result (test 2015–2018; thresholds from val; heads: mean ± sd over 3 seeds)
+
+| Hazard (test prevalence) | climatology | persistence | logistic | encoder λ=0 + heads | encoder λ=0.001 + heads |
+|---|---|---|---|---|---|
+| extreme precipitation (1.8 %) | 0.068 | 0.022 | 0.155 | **0.224 ± 0.005** | 0.155 ± 0.005 |
+| extreme wind (0.93 %) | 0.033 | 0.013 | **0.075** | 0.073 ± 0.006 | 0.056 ± 0.002 |
+| heatwave (8.9 %) | 0.084 | 0.138 | 0.222 | **0.253 ± 0.017** | 0.222 ± 0.008 |
+
+PR-AUC; the no-skill level equals the prevalence. Validation PR-AUC ranks the sources in the same order (λ=0 > λ=0.001 on all three hazards).
+
+What it shows:
+1. Learned models are far better than climatology and persistence. For precipitation, the λ=0 heads reach 12× the no-skill PR-AUC (ROC-AUC 0.93).
+2. **The physics-trained encoder transfers worse to hazard detection than the data-only encoder**, on all three hazards (precipitation 0.155 vs 0.224).
+   This happens even though its weather RMSE is ~2.7 % better. With physics features, the heads are only on par with logistic regression on the raw fields.
+3. The heads behave differently on the two encoders. On the physics features they reach a much lower train loss (0.19–0.29 vs 0.50–0.55 at the best epoch) and peak later (epochs 14–22 vs 6–8),
+   but generalise worse. This is consistent with a representation that is easier to fit but less hazard-relevant. It is a **hypothesis**, not established.
+4. Heatwave climatology is uninformative (ROC-AUC 0.48) by construction: the calendar-day percentile threshold makes the base rate nearly constant through the season.
+
+What it does not show yet:
+- **One encoder per λ.** The ± only covers head seeds. The gap could come from the particular training run of each encoder rather than from λ.
+  The all-checkpoints run checks stability within each run; only more encoder seeds (more compute) can settle it.
+- **No confidence intervals yet** (added for the next run).
+- Precipitation targets depend on the unverified IMD day convention (± 1 day). This applies equally to all sources.
 
 ## Limitations
 - The 5.625° grid (~625 km) gives box-mean extremes only. 5 real longitude columns. Precipitation has only 9 IMD-covered boxes.

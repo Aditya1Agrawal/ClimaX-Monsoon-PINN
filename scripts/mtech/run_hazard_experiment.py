@@ -52,6 +52,9 @@ def main():
     p.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
     p.add_argument("--epochs", type=int, default=40)
     p.add_argument("--no_logistic", action="store_true")
+    p.add_argument("--compare", action="append", default=[],
+                   help="A:B source pair for a paired block-bootstrap of test PR-AUC (repeatable)")
+    p.add_argument("--n_boot", type=int, default=1000)
     p.add_argument("--max_samples", type=int, default=None, help="per split, smoke tests only")
     p.add_argument("--device", default=None)
     p.add_argument("--out_dir", required=True)
@@ -93,15 +96,27 @@ def main():
     Xn = {s: (X[s] - mu) / sd for s in SPLITS}
 
     rows = []
+    test_probs = {}  # source -> (N, K, H, W) test probabilities (mean over seeds)
+    os.makedirs(os.path.join(args.out_dir, "preds"), exist_ok=True)
+    np.savez_compressed(os.path.join(args.out_dir, "preds", "targets.npz"),
+                        **{f"{s}_y": Y[s] for s in ("val", "test")}, **{f"{s}_times": T[s].astype("int64") for s in ("val", "test")})
+
+    def keep(source, probs):
+        np.savez_compressed(os.path.join(args.out_dir, "preds", f"{source}.npz"), val=probs["val"], test=probs["test"])
+        test_probs[source] = probs["test"]
+
     # ---- baselines ----
     clim = {s: hd.climatology_probs(labelsets, s, T[s], lead) for s in ("val", "test")}
     rows += score_rows("climatology", 0, hazards, clim, Y)
+    keep("climatology", clim)
     pers = {s: hd.persistence_probs(labelsets, s, T[s]) for s in ("val", "test")}
     rows += score_rows("persistence", 0, hazards, pers, Y)
+    keep("persistence", pers)
     if not args.no_logistic:
         print("logistic regression baseline ...", flush=True)
         lr = hm.logistic_baseline(Xn["train"], Y["train"], Xn["val"], Y["val"], {"test": Xn["test"]})
         rows += score_rows("logistic", 0, hazards, lr, Y)
+        keep("logistic", lr)
     print(f"baselines done ({time.time() - t0:.0f}s)", flush=True)
 
     # ---- frozen encoders + heads ----
@@ -139,6 +154,7 @@ def main():
         del net
         # targets on the model grid: the duplicated column gets NaN (never trained or scored)
         Ym = {s: (np.concatenate([Y[s], np.full(Y[s].shape[:-1] + (1,), np.nan, np.float32)], -1) if pad else Y[s]) for s in SPLITS}
+        seed_probs = []
         for seed in args.seeds:
             heads, hist = hm.train_heads(feats["train"], Ym["train"], feats["val"], Ym["val"], hazards,
                                          net_args["img_size"], net_args["patch_size"], seed=seed, epochs=args.epochs,
@@ -146,10 +162,12 @@ def main():
             histories += [{"source": name, "seed": seed, **h} for h in hist]
             probs = {s: hm.predict(heads, feats[s], device)[..., :W] for s in ("val", "test")}
             rows += score_rows(name, seed, hazards, probs, Y, meta)
+            seed_probs.append(probs)
             os.makedirs(os.path.join(args.out_dir, "heads"), exist_ok=True)
             torch.save(heads.state_dict(), os.path.join(args.out_dir, "heads", f"{name}_seed{seed}.pt"))
             best = max(hist, key=lambda r: r["val_ap_mean"])
             print(f"  seed {seed}: best epoch {best['epoch']} val PR-AUC {best['val_ap_mean']:.4f}", flush=True)
+        keep(name, {s: np.mean([sp[s] for sp in seed_probs], axis=0) for s in ("val", "test")})
 
     # ---- outputs ----
     res = pd.DataFrame(rows)
@@ -161,6 +179,21 @@ def main():
         precision=("precision", "mean"), recall=("recall", "mean"), prevalence=("prevalence", "first"), n=("n", "first"),
         seeds=("seed", "nunique")).reset_index()
     summ.to_csv(os.path.join(args.out_dir, "hazard_summary_test.csv"), index=False)
+    boot = []
+    for pair in args.compare:
+        a, b = pair.split(":")
+        if a not in test_probs or b not in test_probs:
+            print(f"skip comparison {pair}: unknown source")
+            continue
+        for k, h in enumerate(hazards):
+            r = hm.paired_block_bootstrap(test_probs[a][:, k], test_probs[b][:, k], Y["test"][:, k], n_boot=args.n_boot)
+            boot.append({"a": a, "b": b, "hazard": h, **r})
+    if boot:
+        bt = pd.DataFrame(boot)
+        bt.to_csv(os.path.join(args.out_dir, "bootstrap_test.csv"), index=False)
+        print()
+        print("Paired block bootstrap, test PR-AUC(a) - PR-AUC(b) [95% CI] (model sources: mean of seed probabilities):")
+        print(bt.round(4).to_string(index=False))
     commit = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True,
                             cwd=os.path.dirname(os.path.abspath(__file__))).stdout.strip()
     json.dump({"args": vars(args), "git_commit": commit, "lead_hours": lead, "hazards": hazards,
