@@ -50,7 +50,7 @@ tokens --head_k: Linear(1024, 256) → GELU → Dropout(0.1) → Linear(256, 4)-
 - The pipeline was verified locally on CPU (real data, real IMD labels, synthetic encoders).
 - First Kaggle run on 2026-10-11, repo commit `6d2e7b3`, 16.5 min: final-best checkpoints only (λ=0.001 `epoch_016`, λ=0 `epoch_016`).
   Results are in `docs/mtech/results/hazard_optionA/`.
-- **Next run:** all 8 checkpoints of both runs, plus a paired block bootstrap (7-day blocks) of the PR-AUC differences.
+- Second Kaggle run, 2026-10-11: all 8 checkpoints of both runs, plus a paired block bootstrap. Results are in `docs/mtech/results/hazard_optionA_allckpt/`.
 
 ## First result (test 2015–2018; thresholds from val; heads: mean ± sd over 3 seeds)
 
@@ -84,3 +84,35 @@ What it does not show yet:
 ## Later (after Review 2 or with more compute)
 Corrected 6 × 6 grid encoders; fine-tuning the encoder with `L_weather + λ L_hyps + Σ λ_k L_hazard_k` (where negative transfer becomes testable);
 several encoder seeds; pretrained ClimaX initialisation with name-aware weight loading.
+
+## Second result: all checkpoints + bootstrap confidence intervals
+
+**Stability across checkpoints.** Test PR-AUC, min–max over the 4 checkpoints of each run (each the mean of 3 head seeds):
+
+| Hazard | λ=0 run (e013, e015, e016, e019) | λ=0.001 run (e011, e016, e017, e019) |
+|---|---|---|
+| extreme precipitation | 0.220 – 0.224 | 0.155 – 0.172 |
+| extreme wind | 0.071 – 0.077 | 0.051 – 0.056 |
+| heatwave | 0.253 – 0.262 | 0.222 – 0.226 |
+
+The ranges do not overlap for any hazard. The gap does not depend on which checkpoint is picked.
+
+**Paired 7-day block bootstrap** (final-best checkpoints, test PR-AUC difference a − b, 95 % CI, 1000 resamples):
+
+| Comparison | heatwave | extreme wind | extreme precipitation |
+|---|---|---|---|
+| λ=0.001 − λ=0 | −0.032 [−0.053, −0.009] | −0.021 [−0.039, −0.005] | −0.073 [−0.130, −0.019] |
+| λ=0.001 − logistic | +0.003 [−0.019, 0.028] | −0.019 [−0.040, −0.002] | +0.001 [−0.044, 0.045] |
+| λ=0 − logistic | +0.035 [0.011, 0.057] | +0.002 [−0.019, 0.020] | +0.074 [0.030, 0.121] |
+| λ=0.001 − climatology | +0.141 [0.089, 0.194] | +0.023 [0.011, 0.039] | +0.088 [0.054, 0.125] |
+| λ=0 − climatology | +0.173 [0.113, 0.225] | +0.044 [0.025, 0.066] | +0.161 [0.093, 0.238] |
+
+**Conclusions within these two training runs:**
+1. **The λ=0 encoder transfers better than the λ=0.001 encoder on all three hazards.** The CIs exclude zero, and the result holds for every checkpoint.
+2. The λ=0 encoder adds skill over a linear model on the raw fields for heatwave and precipitation, but not for wind.
+   The λ=0.001 encoder adds none, and is slightly worse than logistic for wind.
+3. Both clearly beat climatology and persistence.
+
+**Remaining caveat:** the bootstrap covers test-sample uncertainty, and the checkpoint sweep covers checkpoint choice. Neither covers **training-run randomness**:
+each λ is still a single training run, and checkpoints of one run are strongly correlated. The decisive test is a second encoder seed per λ (≈ 9 GPU h for the pair).
+Until then, write it as: "in our runs, physics regularisation improved weather RMSE (−2.7 % median) but reduced hazard transferability of the frozen representation."
