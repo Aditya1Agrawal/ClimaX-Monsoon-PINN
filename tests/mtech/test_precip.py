@@ -33,3 +33,12 @@ def test_regrid_conserves_and_reports_coverage():
     mean, cov = P.regrid_to_boxes(rain, w1, w2, area)
     assert np.allclose(mean[:, 0, :], [[1, 1], [10, 10]])
     assert abs(cov[0, 0, 0] - 0.5) < 0.03 and abs(cov[0, 0, 1] - 1.0) < 0.01
+
+
+def test_reader_accepts_flat_layout(tmp_path):
+    _write_year(tmp_path, 2001, 2.0)
+    (tmp_path / "rain" / "2001.grd").rename(tmp_path / "2001.grd")
+    _, rain = P.read_imd_year(tmp_path, 2001)
+    assert np.nanmax(rain) == 2.0
+    with pytest.raises(FileNotFoundError):
+        P.read_imd_year(tmp_path, 1999)

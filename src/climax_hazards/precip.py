@@ -1,7 +1,7 @@
 """IMD 0.25 deg gridded daily rainfall -> regional 5.625 deg boxes -> extreme-precipitation labels.
 
 Source: Pai et al. (2014), Mausam 65(1), 1-18. Yearly binary files ``rain/<year>.grd``
-(as written by ``imdlib``): little-endian float32, shape (days, 129 lat, 135 lon),
+(as written by ``imdlib``; a flat ``<year>.grd`` folder also works): little-endian float32, shape (days, 129 lat, 135 lon),
 lat 6.5..38.5 N, lon 66.5..100.0 E, step 0.25 deg, missing = -999 (sea / outside India).
 
 Regridding is area-conservative: each 0.25 deg source cell contributes to a target box in
@@ -33,9 +33,17 @@ IMD_RES = 0.25
 IMD_MISSING = -999.0
 
 
+def imd_year_path(imd_dir, year: int) -> str:
+    """``<imd_dir>/rain/<year>.grd`` (imdlib layout) or ``<imd_dir>/<year>.grd`` (flat upload)."""
+    for p in (os.path.join(imd_dir, "rain", f"{year}.grd"), os.path.join(imd_dir, f"{year}.grd")):
+        if os.path.exists(p):
+            return p
+    raise FileNotFoundError(f"IMD file for {year} not found in {imd_dir} or {imd_dir}/rain")
+
+
 def read_imd_year(imd_dir, year: int) -> Tuple[np.ndarray, np.ndarray]:
     """Return (dates, rain[days, 129, 135]) with NaN for missing values."""
-    path = os.path.join(imd_dir, "rain", f"{year}.grd")
+    path = imd_year_path(imd_dir, year)
     raw = np.fromfile(path, dtype="<f4")
     n_days = 366 if (year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)) else 365
     if raw.size != n_days * IMD_LAT.size * IMD_LON.size:
