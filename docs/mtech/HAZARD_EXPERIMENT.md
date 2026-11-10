@@ -116,3 +116,31 @@ The ranges do not overlap for any hazard. The gap does not depend on which check
 **Remaining caveat:** the bootstrap covers test-sample uncertainty, and the checkpoint sweep covers checkpoint choice. Neither covers **training-run randomness**:
 each λ is still a single training run, and checkpoints of one run are strongly correlated. The decisive test is a second encoder seed per λ (≈ 9 GPU h for the pair).
 Until then, write it as: "in our runs, physics regularisation improved weather RMSE (−2.7 % median) but reduced hazard transferability of the frozen representation."
+
+## Next experiment: joint fine-tuning with adaptive loss balancing (notebook 05)
+
+Code: `src/climax_hazards/joint.py`, `scripts/mtech/train_joint.py`, `notebooks/05_joint_adaptive_training.ipynb`; tests `tests/mtech/test_joint.py`.
+
+- **Grid:** the corrected 6 × 6 dataset (lon 67.5–95.625°E, no duplicated column).
+- **Model:** the ClimaX encoder is **fine-tuned**, not frozen. The existing weather head and the three hazard heads share the encoder tokens.
+- **Five tasks:**
+
+  | Task | Loss |
+  |---|---|
+  | weather | lat-weighted MSE in normalised units |
+  | physics | hypsometric residual matching, 500–850 hPa, divided by (18 m)² |
+  | heatwave, extreme wind, extreme rainfall | masked, class-weighted BCE on the D+3 labels |
+
+- **Adaptive balancing:** uncertainty weighting (Kendall, Gal & Cipolla, CVPR 2018), `L = Σ exp(−s_i)·L_i + s_i`, with learnable `s_i` clamped to ±6.
+  At the optimum `exp(−s_i) = 1/L_i`, so tasks contribute on comparable scales without a hand-set λ.
+  A `fixed` mode keeps the internship weights (λ = 0.001 on raw m²) for ablation.
+- **Initialisation:** the λ = 0 `epoch_016` checkpoint, which transferred best to hazards in Option A. The λ = 0.001 checkpoint and training from scratch are also supported.
+  The checkpoint was trained on the padded grid, so its positional embeddings are re-learned during fine-tuning (the first column now is 67.5°E).
+- **Samples:** every hour t with t + 72 h in the same split (≈280 k training pairs), drawn at random, 65,536 per epoch.
+  Hazard targets are the labels of the UTC day containing t + 72 h.
+- **Optimiser:** AdamW, with lr 1e-4 (encoder + weather head), 5e-4 (hazard heads) and 1e-2 (task weights).
+  500 warm-up steps, then cosine decay, gradient clipping 1.0, fp16 mixed precision on GPU.
+- **Selection:** best mean validation PR-AUC (00 UTC samples), with early stopping (patience 4). Weather validation RMSE is logged every epoch.
+- **Evaluation:** test hazards on exactly the same 00 UTC samples as the frozen baseline on the corrected grid (heads on frozen λ = 0 / λ = 0.001 encoders, logistic, climatology, persistence).
+  It uses the paired 7-day block bootstrap. Weather is scored on the full test set against persistence and climatology, including the hypsometric-consistency score.
+- **Status:** verified locally (CPU smoke runs with real data and labels, synthetic checkpoints, 32 unit tests). **No results yet.**

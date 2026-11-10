@@ -15,7 +15,8 @@ The original internship code (`src/climax/**`, `configs/regional_india.yaml`) st
 | Step D labels | Heatwave (percentile + IMD-style, March–June), extreme wind and extreme precipitation (IMD 0.25°, 9 covered boxes) done; notebook `02_labels_eda.ipynb`; see `HAZARD_DEFINITIONS.md`. IMD day convention still to verify |
 | Step F ablation | λ=0 vs λ=0.001, seed 42, padded grid: physics run better on 17/17 variables (1.3–4.0 % RMSE, `results/README.md`). **Needs seeds 43/44 and real-column re-scoring**; notebook `03_train_weather_ablation.ipynb` prepared (smoke-test default) |
 | Option A hazard heads (chosen 2026-10-10) | Frozen λ=0 / λ=0.001 encoders + per-hazard heads vs climatology, persistence and logistic baselines; `docs/mtech/HAZARD_EXPERIMENT.md`, notebook `04_hazard_heads.ipynb`. Verified locally with synthetic encoders. **Kaggle run pending** |
-| Corrected-grid encoders, fine-tuning, more seeds | Deferred until after Review 2 or more compute |
+| Joint fine-tuning with adaptive loss balancing | Built: uncertainty weighting over weather, physics and 3 hazard tasks on the corrected 6×6 grid, initialised from the λ=0 checkpoint (`notebooks/05_joint_adaptive_training.ipynb`). **Kaggle run pending** |
+| More encoder seeds, higher resolution | Deferred until more compute |
 
 ## Decisions taken (2026-10-10)
 
