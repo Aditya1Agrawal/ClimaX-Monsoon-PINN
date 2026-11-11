@@ -144,3 +144,48 @@ Code: `src/climax_hazards/joint.py`, `scripts/mtech/train_joint.py`, `notebooks/
 - **Evaluation:** test hazards on exactly the same 00 UTC samples as the frozen baseline on the corrected grid (heads on frozen λ = 0 / λ = 0.001 encoders, logistic, climatology, persistence).
   It uses the paired 7-day block bootstrap. Weather is scored on the full test set against persistence and climatology, including the hypsometric-consistency score.
 - **Status:** verified locally (CPU smoke runs with real data and labels, synthetic checkpoints, 32 unit tests). **No results yet.**
+
+## Result: joint fine-tuning v1 (Kaggle 2×T4, 2026-11-11, commit `93fb1d3`)
+
+Files: `docs/mtech/results/joint_uw_v1/` (joint run) and `docs/mtech/results/frozen_corrected6x6/` (frozen baseline, same grid and samples).
+The joint run initialised from λ=0 `epoch_016`, used uncertainty weighting, and trained for 1.3 min/epoch.
+Early stopping came at epoch 6, the best epoch was 2, and the whole run took 12.7 min.
+
+**Test PR-AUC on the corrected 6×6 grid** (frozen heads: mean of 3 seeds):
+
+| Hazard (prevalence) | climatology | persistence | logistic | frozen λ=0 | frozen λ=0.001 | **joint** |
+|---|---|---|---|---|---|---|
+| heatwave (9.2 %) | 0.089 | 0.141 | 0.235 | 0.232 | 0.224 | **0.254** |
+| extreme wind (0.90 %) | 0.033 | 0.012 | **0.073** | 0.059 | 0.049 | 0.052 |
+| extreme rainfall (1.8 %) | 0.068 | 0.022 | 0.165 | 0.174 | **0.194** | 0.172 |
+
+**Paired 7-day block bootstrap (95 % CI), joint − other:**
+
+| vs | heatwave | extreme wind | extreme rainfall |
+|---|---|---|---|
+| frozen λ=0 (same init) | +0.018 [−0.005, 0.040] | −0.008 [−0.018, 0.002] | −0.006 [−0.047, 0.033] |
+| frozen λ=0.001 | **+0.027 [0.003, 0.051]** | +0.003 [−0.005, 0.013] | −0.027 [−0.085, 0.028] |
+| logistic | +0.019 [−0.007, 0.045] | **−0.021 [−0.045, −0.004]** | +0.007 [−0.035, 0.050] |
+| climatology / persistence | all better, CIs exclude 0 | all better | all better |
+
+**Frozen λ=0 − frozen λ=0.001 on the corrected grid:**
+heat +0.009 [−0.018, 0.037]; wind +0.010 [−0.002, 0.024]; rain −0.022 [−0.080, 0.037]. **All CIs include 0.**
+
+**Weather (test RMSE vs climatology, joint model):**
+- Better aloft: z50 +22.9 %, z250 +17.8 %, z500 +9.8 %, t250 +14.6 %.
+- **Worse near the surface:** t2m −4.7 %, u10 −4.2 %, v10 −3.7 %, z850 −2.2 %, z925 −2.4 %.
+- Hypsometric error: 500–850 hPa equals climatology (11.0 m). The untrained low layers are much worse: 700–850 hPa 4.5 m vs 3.0 m; 850–925 hPa 4.3 m vs 1.5 m.
+
+**Learned task weights** at the best epoch: weather 11.0, physics 4.1, heat 1.7, wind 2.2, rain 2.5. They tracked ≈ 1/training loss, as designed.
+
+**Inference:**
+1. Joint fine-tuning **did not significantly beat frozen heads from the same initialisation** on any hazard. Heat is borderline (+0.018, p ≈ 0.07). It does significantly beat frozen λ=0.001 on heat.
+2. **Hazard overfitting, amplified by the weighting.** Training BCE fell about 70 % in 6 epochs while validation PR-AUC peaked at epoch 2 (heat) or was still rising (rain).
+   Uncertainty weighting increases a task's weight as its training loss falls (exp(−s) ≈ 1/L), so the weights of the overfitting hazard tasks kept growing (heat 1.1 → 3.4).
+   Hourly samples share each day's label (24 near-duplicates per day), so the effective sample size is far smaller than 280 k.
+3. **Near-surface weather degraded, falling below climatology.** Selection by mean hazard PR-AUC stopped at epoch 2, while weather was still re-adapting from the padded-grid initialisation (validation t2m RMSE 3.13 → 2.40 over epochs 0–6).
+   Low-level hypsometric consistency also worsened. The selection criterion ignored weather.
+4. **The earlier "physics encoder transfers worse" finding does not reproduce on the corrected grid**: all frozen λ=0 vs λ=0.001 CIs include 0.
+   Both encoders were trained on the padded grid and are applied here with a one-column shift, so this frozen comparison is confounded. The physics question needs encoders trained on the corrected grid.
+5. Logistic regression stays a strong baseline. No variant significantly beats it except on heat, and it is the best method for wind.
+6. One training epoch (5) logged NaN losses (an fp16 overflow). The gradient scaler skipped the bad steps and training recovered, but a guard and counter are needed.

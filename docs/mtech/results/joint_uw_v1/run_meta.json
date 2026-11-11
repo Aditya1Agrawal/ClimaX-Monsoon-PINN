@@ -1,0 +1,73 @@
+{
+ "args": {
+  "data_dir": "/kaggle/input/datasets/agrawaladi/climax-india-6x6-corrected/regional_climax_dataset_6x6_corrected",
+  "imd_dir": "/kaggle/input/datasets/agrawaladi/imd-rainfall",
+  "config": "configs/regional_india.yaml",
+  "init_ckpt": "/kaggle/input/datasets/agrawaladi/checkpoints-for-regional-forecasting-baseline/epoch_016.ckpt",
+  "from_scratch": false,
+  "hazards": [
+   "heatwave",
+   "extreme_wind",
+   "extreme_precip"
+  ],
+  "balancing": "uncertainty",
+  "fixed_physics": 0.001,
+  "fixed_hazard": 1.0,
+  "no_physics": false,
+  "physics_scale_m": 18.0,
+  "epochs": 15,
+  "samples_per_epoch": 65536,
+  "batch_size": 128,
+  "lr_encoder": 0.0001,
+  "lr_heads": 0.0005,
+  "lr_weights": 0.01,
+  "warmup_steps": 500,
+  "patience": 4,
+  "val_weather_stride": 6,
+  "seed": 42,
+  "device": null,
+  "no_amp": false,
+  "smoke": false,
+  "tiny_model": false,
+  "weather_eval_max_files": null,
+  "compare_dir": "/kaggle/working/frozen_corrected",
+  "compare_sources": [
+   "frozen_nophysics",
+   "frozen_physics",
+   "logistic",
+   "climatology",
+   "persistence"
+  ],
+  "out_dir": "/kaggle/working/joint_uncertainty_init-nophysics"
+ },
+ "git_commit": "93fb1d392195ca4d4d616135ffac6fcdf782f0aa",
+ "tasks": [
+  "weather",
+  "physics",
+  "heatwave",
+  "extreme_wind",
+  "extreme_precip"
+ ],
+ "hazards": [
+  "heatwave",
+  "extreme_wind",
+  "extreme_precip"
+ ],
+ "init": "epoch_016.ckpt",
+ "init_lambda": 0.0,
+ "init_epoch": 16,
+ "best_epoch": 2,
+ "final_task_weights": {
+  "weather": 11.040299415588379,
+  "physics": 4.056766510009766,
+  "heatwave": 1.7194631099700928,
+  "extreme_wind": 2.16827392578125,
+  "extreme_precip": 2.492975950241089
+ },
+ "n_pairs": {
+  "train": 280056,
+  "val": 34944,
+  "test": 34944
+ },
+ "elapsed_min": 12.7
+}
