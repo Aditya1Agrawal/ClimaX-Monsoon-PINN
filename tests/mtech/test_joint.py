@@ -90,3 +90,44 @@ def test_joint_model_shapes_and_strict_load():
     other = ClimaX(vars_ + ["d"], img_size=[6, 6], patch_size=2, embed_dim=32, depth=1, decoder_depth=1, num_heads=4)
     with pytest.raises(RuntimeError):
         J.load_climax_state(other, sd)
+
+
+def test_uncertainty_weight_cap_holds():
+    uw = J.UncertaintyWeighting(["weather", "heat"], max_weight={"heat": 2.0})
+    opt = torch.optim.SGD(uw.parameters(), lr=0.1)
+    losses = {"weather": torch.tensor(0.05), "heat": torch.tensor(0.01)}  # tiny "overfitting" heat loss
+    for _ in range(2000):
+        total, _ = uw(losses)
+        opt.zero_grad()
+        total.backward()
+        opt.step()
+    _, w = uw(losses)
+    assert w["heat"] <= 2.0 + 1e-5          # capped instead of growing to ~100
+    assert abs(w["weather"] - 20.0) < 1.0   # uncapped task still reaches 1/L
+
+
+def test_gradnorm_balances_gradient_norms_and_keeps_sum():
+    torch.manual_seed(0)
+    shared = torch.nn.Linear(4, 4)
+    head_a, head_b = torch.nn.Linear(4, 1), torch.nn.Linear(4, 1)
+    gn = J.GradNormWeighting(["a", "b"], alpha=0.0)   # alpha 0: pure gradient-norm equalisation
+    opt = torch.optim.Adam(gn.parameters(), lr=0.05)
+    x = torch.randn(32, 4)
+    for _ in range(300):
+        z = shared(x)
+        losses = {"a": (head_a(z) ** 2).mean() * 100.0, "b": (head_b(z) ** 2).mean()}  # a has ~100x larger gradients
+        assert gn.update(losses, shared.weight, opt)
+    w = gn.w.detach()
+    assert abs(float(w.sum()) - 2.0) < 1e-4
+    z = shared(x)
+    la, lb = (head_a(z) ** 2).mean() * 100.0, (head_b(z) ** 2).mean()
+    ga = torch.autograd.grad(la, shared.weight, retain_graph=True)[0].norm() * w[0]
+    gb = torch.autograd.grad(lb, shared.weight)[0].norm() * w[1]
+    assert w[0] < w[1]                                   # the large-gradient task is down-weighted
+    assert float(abs(ga - gb) / (ga + gb)) < 0.25        # weighted gradient norms roughly equal
+
+
+def test_gradnorm_skips_non_finite():
+    gn = J.GradNormWeighting(["a"])
+    p = torch.nn.Parameter(torch.ones(2))
+    assert gn.update({"a": (p * float("nan")).sum()}, p, torch.optim.Adam(gn.parameters())) is False

@@ -111,20 +111,84 @@ class JointModel(nn.Module):
 
 
 class UncertaintyWeighting(nn.Module):
-    """Kendall et al. (2018) homoscedastic uncertainty weighting."""
+    """Kendall et al. (2018) homoscedastic uncertainty weighting, with optional per-task weight caps.
 
-    def __init__(self, tasks: Sequence[str], clamp: float = 6.0):
+    The optimum weight is exp(-s) = 1 / L, so a task whose *training* loss keeps falling
+    (e.g. an overfitting hazard head) gets an ever larger weight. ``max_weight`` caps
+    exp(-s) for chosen tasks (lower bound s >= -log(cap)) to stop that feedback loop.
+    """
+
+    def __init__(self, tasks: Sequence[str], clamp: float = 6.0, max_weight: Optional[Dict[str, float]] = None):
         super().__init__()
         self.tasks = list(tasks)
         self.log_vars = nn.Parameter(torch.zeros(len(self.tasks)))
         self.clamp = clamp
+        lo = [-clamp] * len(self.tasks)
+        for i, t in enumerate(self.tasks):
+            if max_weight and t in max_weight and max_weight[t]:
+                lo[i] = max(lo[i], -float(np.log(max_weight[t])))
+        self.register_buffer("lower", torch.tensor(lo, dtype=torch.float32))
 
     def forward(self, losses: Dict[str, torch.Tensor]):
-        s = self.log_vars.clamp(-self.clamp, self.clamp)
+        s = torch.maximum(self.log_vars, self.lower).clamp(max=self.clamp)
         total = 0.0
         for i, t in enumerate(self.tasks):
             total = total + torch.exp(-s[i]) * losses[t] + s[i]
         return total, {t: float(torch.exp(-s[i])) for i, t in enumerate(self.tasks)}
+
+
+class GradNormWeighting(nn.Module):
+    """GradNorm (Chen et al., ICML 2018): balance per-task gradient norms on a shared layer.
+
+    Weights w_i (sum = number of tasks) are updated so that the gradient norm of each
+    weighted task loss on a shared parameter W approaches mean_norm * r_i**alpha, where
+    r_i is the task's relative inverse training rate (L_i / L_i(0), normalised). Unlike
+    uncertainty weighting it does not give more weight to a task just because its training
+    loss is small. The target is treated as a constant, as in the paper, so the gradient for
+    w_i is sign(w_i g_i - target_i) * g_i with g_i = ||dL_i/dW||.
+    """
+
+    def __init__(self, tasks: Sequence[str], alpha: float = 1.5, min_weight: float = 0.05):
+        super().__init__()
+        self.tasks = list(tasks)
+        self.w = nn.Parameter(torch.ones(len(self.tasks)))
+        self.alpha = alpha
+        self.min_weight = min_weight
+        self.register_buffer("initial", torch.zeros(len(self.tasks)))
+        self.register_buffer("has_initial", torch.zeros((), dtype=torch.bool))
+
+    def forward(self, losses: Dict[str, torch.Tensor]):
+        w = self.w.detach()
+        total = sum(w[i] * losses[t] for i, t in enumerate(self.tasks))
+        return total, {t: float(w[i]) for i, t in enumerate(self.tasks)}
+
+    def update(self, losses: Dict[str, torch.Tensor], shared_param: torch.nn.Parameter, optimizer: torch.optim.Optimizer) -> bool:
+        """One GradNorm step on the weights; returns False (and does nothing) if any norm is non-finite."""
+        lv = torch.stack([losses[t].detach().float() for t in self.tasks])
+        if not torch.isfinite(lv).all():
+            return False
+        if not bool(self.has_initial):
+            self.initial.copy_(lv.clamp_min(1e-8))
+            self.has_initial.fill_(True)
+        g = []
+        for t in self.tasks:
+            gr = torch.autograd.grad(losses[t], shared_param, retain_graph=True, allow_unused=True)[0]
+            g.append(torch.zeros((), device=lv.device) if gr is None else gr.float().norm())
+        g = torch.stack(g)
+        if not torch.isfinite(g).all():
+            return False
+        w = self.w.detach()
+        gw = w * g
+        ratio = lv / self.initial
+        r = ratio / ratio.mean()
+        target = gw.mean() * r ** self.alpha
+        optimizer.zero_grad(set_to_none=True)
+        self.w.grad = torch.sign(gw - target) * g
+        optimizer.step()
+        with torch.no_grad():  # keep weights positive and sum = number of tasks
+            self.w.clamp_(min=self.min_weight)
+            self.w.mul_(len(self.tasks) / self.w.sum())
+        return True
 
 
 class FixedWeighting(nn.Module):

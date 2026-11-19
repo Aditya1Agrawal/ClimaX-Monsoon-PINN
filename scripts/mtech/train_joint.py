@@ -1,21 +1,33 @@
 """Fine-tune ClimaX jointly for weather, physics and hazards with adaptive loss balancing.
 
-    python scripts/mtech/train_joint.py --data_dir <corrected 6x6 dataset> --imd_dir <IMD folder> \
-        --init_ckpt <lambda0 epoch_016.ckpt> --out_dir /kaggle/working/joint_uw
+Stage A (adapt the encoder to the corrected grid, weather [+ physics] only, export it):
+    python scripts/mtech/train_joint.py --data_dir <corrected 6x6> --init_ckpt <lambda0 epoch_016.ckpt> \
+        --no_hazards --export_encoder --out_dir /kaggle/working/stageA_phys_s0 --seed 0
+    (add --no_physics for the weather-only variant)
 
-Smoke test (CPU ok):  add --smoke
-Ablation with the internship's fixed weights:  --balancing fixed --fixed_physics 0.001
-Compare with a frozen-encoder run of run_hazard_experiment.py on the same dataset:
-    --compare_dir <its out_dir> --compare_sources nophysics_e016 ...
+Stage C (joint v2 from a Stage-A encoder):
+    python scripts/mtech/train_joint.py --data_dir <corrected 6x6> --imd_dir <IMD> \
+        --init_ckpt <stageA .../best_encoder.ckpt> --balancing uncertainty --max_hazard_weight 2 \
+        --lr_encoder 3e-5 --out_dir /kaggle/working/stageC_uw
 
-Outputs: best.pt, history.csv, hazard_results.csv, weather_test.csv, preds/joint.npz,
-bootstrap_vs_frozen.csv (if --compare_dir), run_meta.json.
+v2 fixes (see docs/mtech/HAZARD_EXPERIMENT.md, "joint fine-tuning v1"):
+* hazard losses use their own batch of one sample per day (00 UTC), not 24 near-duplicate hours;
+* uncertainty weighting can cap hazard weights (--max_hazard_weight); GradNorm is available;
+* model selection: best mean val PR-AUC among epochs whose val weather MSE is within
+  --weather_tolerance of the starting model; never select an epoch that degrades weather;
+* non-finite batches (fp16 overflow) are skipped and counted;
+* head dropout / weight decay are configurable.
+
+Smoke test (CPU ok): add --smoke [--tiny_model --from_scratch].
+Outputs: history.csv, hazard_results.csv, weather_test.csv, preds/, run_meta.json,
+bootstrap_vs_frozen.csv (with --compare_dir), best_encoder.ckpt (with --export_encoder).
 """
 
 import argparse
 import json
 import math
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -64,13 +76,12 @@ def predict(model, data, idx, variables, lead, device, amp, bs=256):
 def evaluate_val(model, val, variables, lead, device, amp, w_lat_np, std, weather_idx, hz_idx):
     w, _ = predict(model, val, weather_idx, variables, lead, device, amp)
     _, y, _ = val.batch(weather_idx)
-    y = y.numpy()
-    err = ((w - y) ** 2 * w_lat_np).mean(axis=(0, 2, 3))           # per variable, normalised units
+    err = ((w - y.numpy()) ** 2 * w_lat_np).mean(axis=(0, 2, 3))   # per variable, normalised units
     out = {"val_w_mse": float(err.mean())}
     rmse_phys = np.sqrt(err) * std.reshape(-1)
     for v in ("geopotential_500", "temperature_850", "2m_temperature", "10m_u_component_of_wind"):
         out[f"val_rmse_{v}"] = float(rmse_phys[variables.index(v)])
-    if val.haz is not None:
+    if val.haz is not None and len(val.hazards):
         _, p = predict(model, val, hz_idx, variables, lead, device, amp)
         aps = [hm.average_precision(p[:, k], val.haz[hz_idx, k]) for k in range(p.shape[1])]
         out.update({f"val_ap_{h}": a for h, a in zip(val.hazards, aps)})
@@ -78,19 +89,26 @@ def evaluate_val(model, val, variables, lead, device, amp, w_lat_np, std, weathe
     return out
 
 
-def main():
+def parse():
     p = argparse.ArgumentParser()
     p.add_argument("--data_dir", required=True)
     p.add_argument("--imd_dir", default=None)
     p.add_argument("--config", default="configs/regional_india.yaml")
-    p.add_argument("--init_ckpt", default=None, help="Lightning checkpoint to start from (strict load)")
+    p.add_argument("--init_ckpt", default=None, help="checkpoint with 'net.' keys (Lightning or best_encoder.ckpt)")
     p.add_argument("--from_scratch", action="store_true")
     p.add_argument("--hazards", nargs="+", default=list(hd.HAZARDS))
-    p.add_argument("--balancing", choices=["uncertainty", "fixed"], default="uncertainty")
-    p.add_argument("--fixed_physics", type=float, default=0.001, help="fixed mode: physics weight (raw m^2 loss scale, as in the internship)")
+    p.add_argument("--no_hazards", action="store_true", help="weather (+physics) only, e.g. Stage A")
+    p.add_argument("--no_physics", action="store_true", help="drop the physics task")
+    p.add_argument("--balancing", choices=["uncertainty", "gradnorm", "fixed"], default="uncertainty")
+    p.add_argument("--max_hazard_weight", type=float, default=None, help="uncertainty mode: cap exp(-s) of hazard tasks")
+    p.add_argument("--gradnorm_alpha", type=float, default=1.5)
+    p.add_argument("--fixed_physics", type=float, default=0.001, help="fixed mode: physics weight on the raw m^2 loss (internship scale)")
     p.add_argument("--fixed_hazard", type=float, default=1.0)
-    p.add_argument("--no_physics", action="store_true", help="drop the physics task (ablation)")
     p.add_argument("--physics_scale_m", type=float, default=18.0)
+    p.add_argument("--hazard_hours", default="0", help="issue hours used for hazard losses: e.g. '0' (one sample/day) or 'all'")
+    p.add_argument("--hazard_batch", type=int, default=64)
+    p.add_argument("--head_dropout", type=float, default=0.1)
+    p.add_argument("--head_weight_decay", type=float, default=1e-4)
     p.add_argument("--epochs", type=int, default=15)
     p.add_argument("--samples_per_epoch", type=int, default=65536)
     p.add_argument("--batch_size", type=int, default=128)
@@ -99,13 +117,15 @@ def main():
     p.add_argument("--lr_weights", type=float, default=1e-2)
     p.add_argument("--warmup_steps", type=int, default=500)
     p.add_argument("--patience", type=int, default=4)
-    p.add_argument("--val_weather_stride", type=int, default=6, help="use every n-th validation pair for weather loss")
+    p.add_argument("--weather_tolerance", type=float, default=0.01, help="hazard selection only among epochs with val w_mse <= start*(1+tol)")
+    p.add_argument("--val_weather_stride", type=int, default=6)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--device", default=None)
     p.add_argument("--no_amp", action="store_true")
-    p.add_argument("--smoke", action="store_true", help="tiny run for pipeline checks")
+    p.add_argument("--smoke", action="store_true")
     p.add_argument("--tiny_model", action="store_true", help="small ClimaX for local CPU tests (not for results)")
     p.add_argument("--weather_eval_max_files", type=int, default=None)
+    p.add_argument("--export_encoder", action="store_true", help="write best_encoder.ckpt (net.* state dict) for later stages")
     p.add_argument("--compare_dir", default=None, help="out_dir of run_hazard_experiment.py on the same data_dir")
     p.add_argument("--compare_sources", nargs="*", default=[])
     p.add_argument("--out_dir", required=True)
@@ -113,9 +133,16 @@ def main():
     if args.smoke:
         args.epochs, args.samples_per_epoch, args.warmup_steps = 2, 512, 10
         args.weather_eval_max_files = args.weather_eval_max_files or 1
+    if args.no_hazards:
+        args.hazards = []
     if "extreme_precip" in args.hazards and not args.imd_dir:
         log("no --imd_dir: dropping extreme_precip")
         args.hazards = [h for h in args.hazards if h != "extreme_precip"]
+    return args
+
+
+def main():
+    args = parse()
     os.makedirs(os.path.join(args.out_dir, "preds"), exist_ok=True)
     torch.manual_seed(args.seed)
     rng = np.random.default_rng(args.seed)
@@ -140,13 +167,19 @@ def main():
     mean = np.concatenate([m[v] for v in variables])[None, :, None, None].astype(np.float32)
     std = np.concatenate([s[v] for v in variables])[None, :, None, None].astype(np.float32)
 
-    log("building hazard labels ...")
-    labelsets = hd.build_labelsets(args.data_dir, args.imd_dir, args.hazards) if args.hazards else {}
+    labelsets = {}
+    if args.hazards:
+        log("building hazard labels ...")
+        labelsets = hd.build_labelsets(args.data_dir, args.imd_dir, args.hazards)
     hazards = list(labelsets)
     log("loading splits into memory ...")
-    data = {sp: J.SplitData(args.data_dir, sp, variables, mean, std, lead, labelsets) for sp in ("train", "val", "test")}
+    data = {sp: J.SplitData(args.data_dir, sp, variables, mean, std, lead, labelsets or None) for sp in ("train", "val", "test")}
     for sp, d in data.items():
         log(f"{sp}: {len(d.times)} hours, {len(d)} forecast pairs, {len(d.issue_hour_indices())} 00 UTC samples")
+    train = data["train"]
+    if hazards:
+        hz_pool = np.arange(len(train)) if args.hazard_hours == "all" else train.issue_hour_indices(tuple(int(h) for h in args.hazard_hours.split(",")))
+        log(f"hazard loss pool: {len(hz_pool)} samples (hours: {args.hazard_hours})")
 
     # ---- model ----
     if args.tiny_model:
@@ -158,34 +191,37 @@ def main():
     if args.init_ckpt and not args.from_scratch:
         ck = iu.load_checkpoint(args.init_ckpt)
         J.load_climax_state(net, ck["state_dict"])
-        init_meta = {"init": os.path.basename(args.init_ckpt), "init_lambda": ck.get("hyper_parameters", {}).get("physics_lambda"),
-                     "init_epoch": ck.get("epoch")}
+        init_meta = {"init": args.init_ckpt, "init_hparams": ck.get("hyper_parameters", {}), "init_epoch": ck.get("epoch")}
         del ck
-        log("initialised from", init_meta)
+        log("initialised from", args.init_ckpt)
     elif not args.from_scratch:
         sys.exit("give --init_ckpt or --from_scratch")
-    model = J.JointModel(net, hazards).to(device)
+    model = J.JointModel(net, hazards, dropout=args.head_dropout).to(device)
 
     tasks = ["weather"] + ([] if args.no_physics else ["physics"]) + hazards
     if args.balancing == "uncertainty":
-        weighting = J.UncertaintyWeighting(tasks).to(device)
+        caps = {h: args.max_hazard_weight for h in hazards} if args.max_hazard_weight else None
+        weighting = J.UncertaintyWeighting(tasks, max_weight=caps).to(device)
+    elif args.balancing == "gradnorm":
+        weighting = J.GradNormWeighting(tasks, alpha=args.gradnorm_alpha).to(device)
     else:
-        fw = {"weather": 1.0, "physics": args.fixed_physics * args.physics_scale_m ** 2}  # undo the scale -> raw-m^2 lambda
+        fw = {"weather": 1.0, "physics": args.fixed_physics * args.physics_scale_m ** 2}
         fw.update({h: args.fixed_hazard for h in hazards})
         weighting = J.FixedWeighting({t: fw[t] for t in tasks})
     phys = J.HypsometricResidual(variables, mean, std, scale_m=args.physics_scale_m).to(device)
     w_lat = J.lat_weights(lat, device)
-    pos_w = torch.tensor(hm.pos_weights(data["train"].haz), device=device) if hazards else None
-    log("tasks:", tasks, "| pos_weight:", None if pos_w is None else pos_w.cpu().numpy().round(1).tolist())
+    pos_w = torch.tensor(hm.pos_weights(train.haz[hz_pool]), device=device) if hazards else None
+    log("tasks:", tasks, "| balancing:", args.balancing, "| pos_weight:", None if pos_w is None else pos_w.cpu().numpy().round(1).tolist())
 
-    head_params = list(model.heads.parameters())
-    enc_params = list(model.net.parameters())
-    groups = [{"params": enc_params, "lr": args.lr_encoder, "weight_decay": 1e-5},
-              {"params": head_params, "lr": args.lr_heads, "weight_decay": 1e-4}]
+    groups = [{"params": list(model.net.parameters()), "lr": args.lr_encoder, "weight_decay": 1e-5}]
+    if hazards:
+        groups.append({"params": list(model.heads.parameters()), "lr": args.lr_heads, "weight_decay": args.head_weight_decay})
     if args.balancing == "uncertainty":
         groups.append({"params": list(weighting.parameters()), "lr": args.lr_weights, "weight_decay": 0.0})
     opt = torch.optim.AdamW(groups, betas=(0.9, 0.99))
-    steps_per_epoch = math.ceil(min(args.samples_per_epoch, len(data["train"])) / args.batch_size)
+    w_opt = torch.optim.Adam(weighting.parameters(), lr=args.lr_weights) if args.balancing == "gradnorm" else None
+    shared_param = model.net.blocks[-1].mlp.fc2.weight      # last shared encoder layer (GradNorm)
+    steps_per_epoch = math.ceil(min(args.samples_per_epoch, len(train)) / args.batch_size)
     total_steps = steps_per_epoch * args.epochs
     sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda st: lr_lambda(st, args.warmup_steps, total_steps))
     scaler = torch.cuda.amp.GradScaler(enabled=amp)
@@ -195,29 +231,55 @@ def main():
     val_h_idx = val.issue_hour_indices()
     w_lat_np = w_lat.cpu().numpy()
 
+    def lt_of(n):
+        return torch.full((n,), lead / 100.0, device=device)
+
+    # ---- reference: the starting model's validation weather ----
+    ref = evaluate_val(model, val, variables, lead, device, amp, w_lat_np, std, val_w_idx, val_h_idx)
+    w_ref = ref["val_w_mse"]
+    log(f"start: val w_mse {w_ref:.4f} (hazard epochs must stay <= {w_ref * (1 + args.weather_tolerance):.4f})")
+
     # ---- train ----
-    history, best_score, bad = [], -np.inf, 0
+    history = [{"epoch": -1, **{k: v for k, v in ref.items()}}]
     best_path = os.path.join(args.out_dir, "best.pt")
-    step = 0
+    weather_path = os.path.join(args.out_dir, "best_weather.pt")
+    best_score, best_w, bad = -np.inf, np.inf, 0
+    best_ep, best_w_ep = None, None
+
+    def save(path, ep):
+        torch.save({"model": model.state_dict(), "weighting": weighting.state_dict(), "epoch": ep, "tasks": tasks,
+                    "hazards": hazards, "net_args": net_args, "args": vars(args)}, path)
+
     for ep in range(args.epochs):
         model.train()
-        idx_all = rng.choice(len(data["train"]), size=min(args.samples_per_epoch, len(data["train"])), replace=False)
-        sums = {t: 0.0 for t in tasks}
-        n = 0
+        idx_all = rng.choice(len(train), size=min(args.samples_per_epoch, len(train)), replace=False)
+        sums, n_ok, skipped = {t: 0.0 for t in tasks}, 0, 0
         te = time.time()
         for b in range(0, len(idx_all), args.batch_size):
-            x, y, h = data["train"].batch(idx_all[b:b + args.batch_size])
+            x, y, h = train.batch(idx_all[b:b + args.batch_size])
             x, y = x.to(device), y.to(device)
-            lt = torch.full((len(x),), lead / 100.0, device=device)
             with torch.autocast(device_type=device.type, dtype=torch.float16, enabled=amp):
-                wpred, hlogit = model(x, lt, variables)
+                wpred, hlogit = model(x, lt_of(len(x)), variables)
             wpred = wpred.float()
             losses = {"weather": J.weather_loss(wpred, y, w_lat)}
             if "physics" in tasks:
                 losses["physics"] = phys(wpred, y)
             if hazards:
-                for k, lk in zip(hazards, J.hazard_losses(hlogit.float(), h.to(device), pos_w)):
+                if args.hazard_hours == "all":
+                    hl, hy = hlogit.float(), h.to(device)
+                else:  # separate batch with one sample per day (no 24x duplicated labels)
+                    xh, _, hy = train.batch(rng.choice(hz_pool, size=args.hazard_batch, replace=False))
+                    with torch.autocast(device_type=device.type, dtype=torch.float16, enabled=amp):
+                        _, hl = model(xh.to(device), lt_of(len(xh)), variables)
+                    hl, hy = hl.float(), hy.to(device)
+                for k, lk in zip(hazards, J.hazard_losses(hl, hy, pos_w)):
                     losses[k] = lk
+            if not all(torch.isfinite(v) for v in losses.values()):
+                skipped += 1        # fp16 overflow or bad batch: skip, do not poison weights or logs
+                opt.zero_grad(set_to_none=True)
+                continue
+            if w_opt is not None:
+                weighting.update(losses, shared_param, w_opt)
             total, wts = weighting(losses)
             opt.zero_grad(set_to_none=True)
             scaler.scale(total).backward()
@@ -226,33 +288,46 @@ def main():
             scaler.step(opt)
             scaler.update()
             sched.step()
-            step += 1
             for t in tasks:
                 sums[t] += float(losses[t].detach()) * len(x)
-            n += len(x)
-        tr = {f"train_{t}": sums[t] / n for t in tasks}
+            n_ok += len(x)
+        tr = {f"train_{t}": (sums[t] / n_ok if n_ok else float("nan")) for t in tasks}
+        _, wts = weighting({t: torch.zeros((), device=device) for t in tasks})
         vl = evaluate_val(model, val, variables, lead, device, amp, w_lat_np, std, val_w_idx, val_h_idx)
-        rec = {"epoch": ep, "minutes": (time.time() - te) / 60, **tr, **{f"weight_{t}": wts[t] for t in tasks}, **vl}
+        weather_ok = vl["val_w_mse"] <= w_ref * (1 + args.weather_tolerance)
+        rec = {"epoch": ep, "minutes": (time.time() - te) / 60, "skipped_batches": skipped, "weather_ok": weather_ok,
+               **tr, **{f"weight_{t}": wts[t] for t in tasks}, **vl}
         history.append(rec)
-        score = vl.get("val_ap_mean", -vl["val_w_mse"])
-        msg = f"epoch {ep:02d} {rec['minutes']:.1f} min | " + " ".join(f"{t}={tr['train_' + t]:.4f}(w{wts[t]:.2g})" for t in tasks)
-        log(msg + f" | val w_mse {vl['val_w_mse']:.4f} z500 {vl['val_rmse_geopotential_500']:.1f}"
-            + (f" | val AP {vl['val_ap_mean']:.4f}" if "val_ap_mean" in vl else ""))
         pd.DataFrame(history).to_csv(os.path.join(args.out_dir, "history.csv"), index=False)
-        if (np.isfinite(score) and score > best_score) or not os.path.exists(best_path):
-            best_score, bad = (score if np.isfinite(score) else best_score), 0
-            torch.save({"model": model.state_dict(), "weighting": weighting.state_dict(), "epoch": ep, "tasks": tasks,
-                        "hazards": hazards, "net_args": net_args, "args": vars(args)}, best_path)
-        else:
-            bad += 1
-            if bad >= args.patience:
-                log("early stopping")
-                break
+        log(f"epoch {ep:02d} {rec['minutes']:.1f} min skipped={skipped} | "
+            + " ".join(f"{t}={tr['train_' + t]:.4f}(w{wts[t]:.2g})" for t in tasks)
+            + f" | val w_mse {vl['val_w_mse']:.4f}{'' if weather_ok else ' (weather worse than start)'}"
+            + (f" | val AP {vl['val_ap_mean']:.4f}" if "val_ap_mean" in vl else ""))
 
-    # ---- test evaluation with the best epoch ----
-    best = torch.load(best_path, map_location=device, weights_only=False)
+        improved = False
+        if vl["val_w_mse"] < best_w:
+            best_w, best_w_ep, improved = vl["val_w_mse"], ep, True
+            save(weather_path, ep)
+        if hazards:
+            score = vl.get("val_ap_mean", float("nan"))
+            if weather_ok and np.isfinite(score) and score > best_score:
+                best_score, best_ep, improved = score, ep, True
+                save(best_path, ep)
+        bad = 0 if improved else bad + 1
+        if bad >= args.patience:
+            log("early stopping")
+            break
+
+    # ---- pick the final epoch ----
+    if hazards and best_ep is not None:
+        chosen, rule = best_path, f"best mean val PR-AUC among epochs with weather within {args.weather_tolerance:.0%} of start"
+    else:
+        chosen = weather_path
+        rule = "best val weather (no hazards)" if not hazards else "no epoch kept weather within tolerance -> best val weather"
+    best = torch.load(chosen, map_location=device, weights_only=False)
     model.load_state_dict(best["model"])
-    log(f"best epoch {best['epoch']} (selection: {'mean val PR-AUC' if hazards else 'val w_mse'})")
+    log(f"selected epoch {best['epoch']}: {rule}")
+
     rows = []
     if hazards:
         T, X, Y, probs = {}, {}, {}, {}
@@ -266,7 +341,7 @@ def main():
                 for i in range(0, len(xn), 256):
                     xb = xn[i:i + 256].to(device)
                     with torch.autocast(device_type=device.type, dtype=torch.float16, enabled=amp):
-                        _, hl = model(xb, torch.full((len(xb),), lead / 100.0, device=device), variables)
+                        _, hl = model(xb, lt_of(len(xb)), variables)
                     out.append(torch.sigmoid(hl.float()).cpu().numpy())
             probs[sp] = np.concatenate(out)
         np.savez_compressed(os.path.join(args.out_dir, "preds", "joint.npz"), val=probs["val"], test=probs["test"])
@@ -297,19 +372,30 @@ def main():
                 bt.to_csv(os.path.join(args.out_dir, "bootstrap_vs_frozen.csv"), index=False)
                 log("paired 7-day block bootstrap, test PR-AUC(joint) - PR-AUC(b):\n" + bt.round(4).to_string(index=False))
 
-    # weather: same evaluation as evaluate_forecast.py (persistence + climatology on identical pairs)
     clim = fe.train_climatology(args.data_dir, variables)
     pred_fn = fe.climax_predictor(model.net, variables, variables, m, s, lead, lat, device=str(device))
     wrows = fe.evaluate(args.data_dir, "test", variables, variables, lead, clim, {"joint": pred_fn},
                         {"real": slice(None)}, args.weather_eval_max_files)
     wt = pd.DataFrame(wrows)
     wt.to_csv(os.path.join(args.out_dir, "weather_test.csv"), index=False)
-    piv = wt.pivot_table(index="variable", columns="source", values="rmse", sort=False)
-    log("TEST weather RMSE:\n" + piv.round(3).to_string())
+    log("TEST weather RMSE:\n" + wt.pivot_table(index="variable", columns="source", values="rmse", sort=False).round(3).to_string())
+
+    if args.export_encoder:
+        torch.save({"state_dict": {"net." + k: v for k, v in model.net.state_dict().items()},
+                    "hyper_parameters": {"physics_lambda": None, "physics_task": "physics" in tasks, "balancing": args.balancing,
+                                         "source": "train_joint", "init": init_meta.get("init")},
+                    "epoch": int(best["epoch"])}, os.path.join(args.out_dir, "best_encoder.ckpt"))
+        log("exported best_encoder.ckpt")
+    for pth in (best_path, weather_path):  # large; the selected weights are in best_encoder.ckpt / preds
+        if os.path.exists(pth) and (args.export_encoder or pth != chosen):
+            os.remove(pth)
 
     commit = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, cwd=os.path.dirname(os.path.abspath(__file__))).stdout.strip()
+    sel = next(r for r in history if r["epoch"] == best["epoch"])
     json.dump({"args": vars(args), "git_commit": commit, "tasks": tasks, "hazards": hazards, **init_meta,
-               "best_epoch": int(best["epoch"]), "final_task_weights": {t: history[best["epoch"]][f"weight_{t}"] for t in tasks},
+               "selected_epoch": int(best["epoch"]), "selection_rule": rule, "start_val_w_mse": w_ref,
+               "selected_task_weights": {t: sel.get(f"weight_{t}") for t in tasks},
+               "skipped_batches_total": int(sum(r.get("skipped_batches", 0) for r in history)),
                "n_pairs": {sp: len(d) for sp, d in data.items()}, "elapsed_min": round((time.time() - t0) / 60, 1)},
               open(os.path.join(args.out_dir, "run_meta.json"), "w"), indent=1, default=str)
     log(f"done in {(time.time() - t0) / 60:.1f} min -> {args.out_dir}")

@@ -189,3 +189,22 @@ heat +0.009 [−0.018, 0.037]; wind +0.010 [−0.002, 0.024]; rain −0.022 [−
    Both encoders were trained on the padded grid and are applied here with a one-column shift, so this frozen comparison is confounded. The physics question needs encoders trained on the corrected grid.
 5. Logistic regression stays a strong baseline. No variant significantly beats it except on heat, and it is the best method for wind.
 6. One training epoch (5) logged NaN losses (an fp16 overflow). The gradient scaler skipped the bad steps and training recovered, but a guard and counter are needed.
+
+## Joint training v2: staged design (notebook 06)
+
+Each v1 cause gets a targeted fix. Whether the fixes work must be shown by the Kaggle run; no v2 results yet.
+
+| v1 cause | v2 fix | Where |
+|---|---|---|
+| Encoder trained on the padded grid (1-column shift) | **Stage A**: fine-tune the λ=0 checkpoint on the corrected grid for weather ± physics only. 3 seeds per variant; select on validation weather; export `best_encoder.ckpt` | `train_joint.py --no_hazards --export_encoder` |
+| Physics vs no-physics comparison confounded by the grid | **Stage B**: frozen hazard heads on the 6 Stage-A encoders. Paired bootstrap physics − no-physics per seed; mean ± sd over seeds | `run_hazard_experiment.py` |
+| Uncertainty weighting rewarded overfitting hazards (exp(−s) ≈ 1/L) | Hazard weights capped (`--max_hazard_weight 2`, enforced as s ≥ −log 2). **GradNorm** (Chen et al., ICML 2018) as a second balancer: it equalises gradient norms on the last shared encoder layer and does not reward a small training loss | `joint.UncertaintyWeighting(max_weight=…)`, `joint.GradNormWeighting` |
+| 24 near-duplicate hourly samples per label | Hazard losses use a separate batch of 64 samples drawn from the 00 UTC pool (one per day). Weather and physics losses still use all hours | `--hazard_hours 0 --hazard_batch 64` |
+| Fast hazard overfitting | Encoder lr 3e-5 (was 1e-4), head dropout 0.3 (was 0.1), head weight decay 1e-3 (was 1e-4), patience 5 | Stage C arguments |
+| Selection ignored weather | Best mean validation PR-AUC **only among epochs whose validation weather MSE is within 1 % of the starting model**; otherwise fall back to the best-weather epoch. Early stopping counts epochs without either improvement | `--weather_tolerance 0.01` |
+| fp16 NaN batch | Non-finite batches are skipped, never used for updates or logs, and counted (`skipped_batches`) | training loop |
+
+- **Stage C**: joint training from the Stage-A physics encoder with the lowest validation weather MSE. It runs once with capped uncertainty weighting and once with GradNorm.
+- **Comparison**: on identical test samples, against frozen heads on the *same* encoder, on the matching no-physics encoder, and against logistic, climatology and persistence (paired 7-day block bootstrap).
+- **Weather**: reported relative to the Stage-A starting encoder.
+- **Caveat**: Stage-A seeds vary the fine-tuning (data order, dropout) from one shared initial checkpoint. They are not independent from-scratch trainings.
