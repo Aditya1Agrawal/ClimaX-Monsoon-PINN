@@ -3,7 +3,7 @@
 One ClimaX encoder is fine-tuned for five tasks at once:
 
     weather   lat-weighted MSE of the 72 h forecast (normalised units, as in the internship)
-    physics   hypsometric-residual matching, 500-850 hPa (metres, divided by a scale)
+    physics   hypsometric-residual matching, 500-850 hPa or every adjacent layer (metres, divided by a scale)
     heatwave / extreme_wind / extreme_precip   masked, class-weighted BCE of the D+3 labels
 
 Adaptive balancing uses homoscedastic uncertainty weighting (Kendall, Gal & Cipolla,
@@ -216,27 +216,81 @@ def weather_loss(pred, target, w_lat):
     return (((pred - target) ** 2) * w_lat).mean()
 
 
-class HypsometricResidual(nn.Module):
-    """Residual-matching hypsometric loss on denormalised fields (same formula as the internship loss)."""
+SINGLE_LAYER = ((500, 850),)
+# every adjacent pair of the 7 pressure levels (50 ... 925 hPa): the whole column is constrained
+ADJACENT_LAYERS = ((850, 925), (700, 850), (600, 700), (500, 600), (250, 500), (50, 250))
 
-    def __init__(self, variables: Sequence[str], mean: np.ndarray, std: np.ndarray, upper=500, lower=850, scale_m: float = 18.0):
+
+def parse_layers(spec: str):
+    """'single' | 'adjacent' | '500-850,700-850' -> tuple of (upper, lower) pressure pairs in hPa."""
+    if spec == "single":
+        return SINGLE_LAYER
+    if spec == "adjacent":
+        return ADJACENT_LAYERS
+    out = []
+    for part in spec.split(","):
+        u, l = sorted(int(p) for p in part.split("-"))
+        if u == l:
+            raise ValueError(f"empty layer {part!r}")
+        out.append((u, l))
+    return tuple(out)
+
+
+class HypsometricResidual(nn.Module):
+    """Residual-matching hypsometric loss on denormalised fields, for one or several layers.
+
+    For each layer (p_u < p_l) the residual is R = (Phi_u - Phi_l)/g - (R_d/g) * (T_u + T_l)/2 * ln(p_l/p_u)
+    in metres (the internship formula). The loss matches the predicted residual to the target's,
+    layer by layer, and averages  MSE_k / scale_k**2  over layers, so each layer contributes O(1)
+    and thin, low-error layers are not drowned out by thick ones. With the default single
+    500-850 hPa layer and scale 18 m it is identical to the v2 loss.
+
+    Note: summing the adjacent residuals from 850 to 500 hPa gives the 500-850 thickness residual
+    with a log-pressure trapezoidal layer-mean temperature over 500/600/700/850 hPa, so the adjacent
+    set constrains the thick layer too, with a better mean temperature than the two-level average.
+    """
+
+    def __init__(self, variables: Sequence[str], mean: np.ndarray, std: np.ndarray,
+                 layers: Sequence[Sequence[int]] = SINGLE_LAYER, scale_m=18.0):
         super().__init__()
         v = list(variables)
-        self.idx = [v.index(f"geopotential_{upper}"), v.index(f"geopotential_{lower}"),
-                    v.index(f"temperature_{upper}"), v.index(f"temperature_{lower}")]
-        m = torch.tensor(mean.reshape(-1)[self.idx], dtype=torch.float32)
-        s = torch.tensor(std.reshape(-1)[self.idx], dtype=torch.float32)
-        self.register_buffer("mean", m[None, :, None, None])
-        self.register_buffer("std", s[None, :, None, None])
-        self.coef = (R_D / G) * float(np.log(lower / upper))
-        self.scale2 = scale_m ** 2  # divide m^2 by a typical residual spread so the loss is O(1)
+        self.layers = [tuple(int(p) for p in lay) for lay in layers]
+        if not self.layers:
+            raise ValueError("no layers")
+        idx, coef = [], []
+        for u, l in self.layers:
+            if not u < l:
+                raise ValueError(f"layer {(u, l)} must be (upper, lower) with upper < lower pressure")
+            idx.append([v.index(f"geopotential_{u}"), v.index(f"geopotential_{l}"),
+                        v.index(f"temperature_{u}"), v.index(f"temperature_{l}")])
+            coef.append((R_D / G) * float(np.log(l / u)))
+        self.register_buffer("idx", torch.tensor(idx, dtype=torch.long))           # (K, 4)
+        m, s = mean.reshape(-1), std.reshape(-1)
+        self.register_buffer("mean", torch.tensor(m[idx], dtype=torch.float32))     # (K, 4)
+        self.register_buffer("std", torch.tensor(s[idx], dtype=torch.float32))
+        self.register_buffer("coef", torch.tensor(coef, dtype=torch.float32))
+        self.register_buffer("scale2", torch.ones(len(self.layers)))
+        self.set_scales(scale_m)
+
+    def set_scales(self, scale_m) -> None:
+        """One scale (metres) for all layers or one per layer; the loss divides each layer's MSE by scale**2."""
+        s = np.broadcast_to(np.asarray(scale_m, dtype=np.float64), (len(self.layers),))
+        if not np.all(np.isfinite(s)) or np.any(s <= 0):
+            raise ValueError(f"scales must be positive, got {s}")
+        self.scale2.copy_(torch.tensor(s ** 2, dtype=torch.float32))
 
     def residual(self, x_norm):
-        z_u, z_l, t_u, t_l = (x_norm[:, self.idx] * self.std + self.mean).unbind(1)
-        return (z_u - z_l) / G - self.coef * 0.5 * (t_u + t_l)
+        """(B, V, H, W) normalised fields -> (B, K, H, W) residuals in metres."""
+        f = x_norm[:, self.idx] * self.std[None, :, :, None, None] + self.mean[None, :, :, None, None]  # (B, K, 4, H, W)
+        z_u, z_l, t_u, t_l = f.unbind(2)
+        return (z_u - z_l) / G - self.coef[None, :, None, None] * 0.5 * (t_u + t_l)
+
+    def layer_mse(self, pred_norm, target_norm):
+        """(K,) mean squared residual mismatch per layer, in m^2."""
+        return ((self.residual(pred_norm) - self.residual(target_norm)) ** 2).mean(dim=(0, 2, 3))
 
     def forward(self, pred_norm, target_norm):
-        return F.mse_loss(self.residual(pred_norm), self.residual(target_norm)) / self.scale2
+        return (self.layer_mse(pred_norm, target_norm) / self.scale2).mean()
 
 
 def hazard_losses(logits, y, pos_weight) -> List[torch.Tensor]:

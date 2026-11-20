@@ -1,0 +1,91 @@
+{
+ "args": {
+  "data_dir": "/kaggle/input/datasets/agrawaladi/climax-india-6x6-corrected/regional_climax_dataset_6x6_corrected",
+  "imd_dir": "/kaggle/input/datasets/agrawaladi/imd-rainfall",
+  "config": "configs/regional_india.yaml",
+  "init_ckpt": "/kaggle/working/stageA/A_phys_s1/best_encoder.ckpt",
+  "from_scratch": false,
+  "hazards": [
+   "heatwave",
+   "extreme_wind",
+   "extreme_precip"
+  ],
+  "no_hazards": false,
+  "no_physics": false,
+  "balancing": "uncertainty",
+  "max_hazard_weight": 2.0,
+  "gradnorm_alpha": 1.5,
+  "fixed_physics": 0.001,
+  "fixed_hazard": 1.0,
+  "physics_scale_m": 18.0,
+  "hazard_hours": "0",
+  "hazard_batch": 64,
+  "head_dropout": 0.3,
+  "head_weight_decay": 0.001,
+  "epochs": 15,
+  "samples_per_epoch": 65536,
+  "batch_size": 128,
+  "lr_encoder": 3e-05,
+  "lr_heads": 0.0005,
+  "lr_weights": 0.01,
+  "warmup_steps": 500,
+  "patience": 5,
+  "weather_tolerance": 0.01,
+  "val_weather_stride": 6,
+  "seed": 42,
+  "device": null,
+  "no_amp": false,
+  "smoke": false,
+  "tiny_model": false,
+  "weather_eval_max_files": null,
+  "export_encoder": false,
+  "compare_dir": "/kaggle/working/stageB",
+  "compare_sources": [
+   "A_phys_s1",
+   "A_nophys_s1",
+   "logistic",
+   "climatology",
+   "persistence"
+  ],
+  "out_dir": "/kaggle/working/stageC/C_uncertainty"
+ },
+ "git_commit": "24fe0e6a8aa4994603cb5116c17eb908f4dcf92d",
+ "tasks": [
+  "weather",
+  "physics",
+  "heatwave",
+  "extreme_wind",
+  "extreme_precip"
+ ],
+ "hazards": [
+  "heatwave",
+  "extreme_wind",
+  "extreme_precip"
+ ],
+ "init": "/kaggle/working/stageA/A_phys_s1/best_encoder.ckpt",
+ "init_hparams": {
+  "physics_lambda": null,
+  "physics_task": true,
+  "balancing": "uncertainty",
+  "source": "train_joint",
+  "init": "/kaggle/input/datasets/agrawaladi/checkpoints-for-regional-forecasting-baseline/epoch_016.ckpt"
+ },
+ "init_epoch": 7,
+ "selected_epoch": 4,
+ "selection_rule": "best mean val PR-AUC among epochs with weather within 1% of start",
+ "start_val_w_mse": 0.1937146782875061,
+ "selected_task_weights": {
+  "weather": 16.455177307128906,
+  "physics": 5.8363566398620605,
+  "heatwave": 2.0,
+  "extreme_wind": 2.0,
+  "extreme_precip": 2.0
+ },
+ "skipped_batches_total": 0,
+ "n_pairs": {
+  "train": 280056,
+  "val": 34944,
+  "test": 34944
+ },
+ "elapsed_min": 20.3
+}

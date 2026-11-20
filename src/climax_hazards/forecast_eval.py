@@ -74,7 +74,7 @@ def iter_pairs(data_dir, split: str, variables: Sequence[str], lead: int, max_fi
 
 
 R_D, G = 287.05, 9.80665  # same constants as climax.utils.physics_loss
-DEFAULT_LAYERS = ((500, 850), (250, 500), (700, 850), (850, 925), (600, 700), (50, 250))
+DEFAULT_LAYERS = ((500, 850), (250, 500), (700, 850), (850, 925), (600, 700), (50, 250), (500, 600))
 
 
 def physics_layers(out_variables, layers=DEFAULT_LAYERS):

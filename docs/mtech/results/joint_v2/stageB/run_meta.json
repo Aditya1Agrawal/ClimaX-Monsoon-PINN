@@ -1,0 +1,69 @@
+{
+ "args": {
+  "data_dir": "/kaggle/input/datasets/agrawaladi/climax-india-6x6-corrected/regional_climax_dataset_6x6_corrected",
+  "imd_dir": "/kaggle/input/datasets/agrawaladi/imd-rainfall",
+  "config": "configs/regional_india.yaml",
+  "checkpoint": [
+   "A_phys_s0=/kaggle/working/stageA/A_phys_s0/best_encoder.ckpt",
+   "A_phys_s1=/kaggle/working/stageA/A_phys_s1/best_encoder.ckpt",
+   "A_phys_s2=/kaggle/working/stageA/A_phys_s2/best_encoder.ckpt",
+   "A_nophys_s0=/kaggle/working/stageA/A_nophys_s0/best_encoder.ckpt",
+   "A_nophys_s1=/kaggle/working/stageA/A_nophys_s1/best_encoder.ckpt",
+   "A_nophys_s2=/kaggle/working/stageA/A_nophys_s2/best_encoder.ckpt"
+  ],
+  "hazards": [
+   "heatwave",
+   "extreme_wind",
+   "extreme_precip"
+  ],
+  "issue_hours": [
+   0
+  ],
+  "seeds": [
+   0,
+   1,
+   2
+  ],
+  "epochs": 40,
+  "no_logistic": false,
+  "compare": [
+   "A_phys_s0:A_nophys_s0",
+   "A_phys_s1:A_nophys_s1",
+   "A_phys_s2:A_nophys_s2"
+  ],
+  "n_boot": 1000,
+  "max_samples": null,
+  "device": null,
+  "out_dir": "/kaggle/working/stageB"
+ },
+ "git_commit": "24fe0e6a8aa4994603cb5116c17eb908f4dcf92d",
+ "lead_hours": 72,
+ "hazards": [
+  "heatwave",
+  "extreme_wind",
+  "extreme_precip"
+ ],
+ "n_samples": {
+  "train": 11680,
+  "val": 1460,
+  "test": 1460
+ },
+ "target_prevalence": {
+  "train": {
+   "heatwave": 0.05332323536276817,
+   "extreme_wind": 0.010026565752923489,
+   "extreme_precip": 0.020134547725319862
+  },
+  "val": {
+   "heatwave": 0.06530648469924927,
+   "extreme_wind": 0.008298993110656738,
+   "extreme_precip": 0.020590253174304962
+  },
+  "test": {
+   "heatwave": 0.09167854487895966,
+   "extreme_wind": 0.009043040685355663,
+   "extreme_precip": 0.017921147868037224
+  }
+ },
+ "elapsed_s": 1352
+}

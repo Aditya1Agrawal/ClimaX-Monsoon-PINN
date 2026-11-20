@@ -1,0 +1,8 @@
+source,extreme_precip,extreme_wind,heatwave
+A_nophys_s1 (frozen),0.2277,0.0602,0.2433
+A_phys_s1 (frozen),0.2225,0.0597,0.2451
+C_gradnorm,0.1929,0.0601,0.2506
+C_uncertainty,0.1828,0.0566,0.246
+climatology,0.0685,0.0333,0.0894
+logistic,0.1645,0.0735,0.2352
+persistence,0.0224,0.012,0.1407

@@ -34,7 +34,7 @@ def test_hypsometric_residual_matches_eval_metric():
     rng = np.random.default_rng(0)
     phys = rng.normal(size=(3, 5, 2, 2)).astype(np.float32) * std + mean
     hr = J.HypsometricResidual(v, mean, std, scale_m=1.0)
-    r = hr.residual(torch.from_numpy((phys - mean) / std)).numpy()
+    r = hr.residual(torch.from_numpy((phys - mean) / std)).numpy()[:, 0]
     ref = fe.hypsometric_residuals(phys, v, [(500, 850)])[:, 0]
     assert np.allclose(r, ref, atol=1e-2)
     x = torch.from_numpy((phys - mean) / std)
@@ -131,3 +131,63 @@ def test_gradnorm_skips_non_finite():
     gn = J.GradNormWeighting(["a"])
     p = torch.nn.Parameter(torch.ones(2))
     assert gn.update({"a": (p * float("nan")).sum()}, p, torch.optim.Adam(gn.parameters())) is False
+
+
+LEVELS = (50, 250, 500, 600, 700, 850, 925)
+
+
+def _column(n=4, seed=0):
+    """Random but physically scaled (N, V, 2, 2) fields for all 7 levels, plus normalisation stats."""
+    v = [f"geopotential_{p}" for p in LEVELS] + [f"temperature_{p}" for p in LEVELS]
+    zm = {50: 2.0e5, 250: 1.0e5, 500: 5.7e4, 600: 4.3e4, 700: 3.0e4, 850: 1.46e4, 925: 7.5e3}
+    tm = {50: 210.0, 250: 225.0, 500: 262.0, 600: 270.0, 700: 278.0, 850: 288.0, 925: 293.0}
+    mean = np.array([zm[p] for p in LEVELS] + [tm[p] for p in LEVELS], np.float32)[None, :, None, None]
+    std = np.array([500.0] * 7 + [4.0] * 7, np.float32)[None, :, None, None]
+    phys = np.random.default_rng(seed).normal(size=(n, 14, 2, 2)).astype(np.float32) * std + mean
+    return v, mean, std, phys
+
+
+def test_multi_layer_residuals_match_eval_metric():
+    v, mean, std, phys = _column()
+    hr = J.HypsometricResidual(v, mean, std, layers=J.ADJACENT_LAYERS, scale_m=1.0)
+    r = hr.residual(torch.from_numpy((phys - mean) / std)).numpy()
+    assert r.shape == (4, 6, 2, 2)
+    ref = fe.hypsometric_residuals(phys, v, J.ADJACENT_LAYERS)
+    assert np.allclose(r, ref, atol=2e-2)
+
+
+def test_adjacent_residuals_telescope_to_trapezoid_thick_layer():
+    """Sum of 850-700, 700-600, 600-500 residuals = 500-850 thickness residual with a log-p trapezoid mean T."""
+    v, mean, std, phys = _column()
+    hr = J.HypsometricResidual(v, mean, std, layers=((700, 850), (600, 700), (500, 600)), scale_m=1.0)
+    s = hr.residual(torch.from_numpy((phys - mean) / std)).double().sum(1).numpy()
+    ix = {name: i for i, name in enumerate(v)}
+    p = [850, 700, 600, 500]
+    t_int = sum(0.5 * (phys[:, ix[f"temperature_{a}"]] + phys[:, ix[f"temperature_{b}"]]) * np.log(a / b) for a, b in zip(p[:-1], p[1:]))
+    thick = (phys[:, ix["geopotential_500"]] - phys[:, ix["geopotential_850"]]) / fe.G - (fe.R_D / fe.G) * t_int
+    assert np.allclose(s, thick, atol=5e-2)
+
+
+def test_multi_layer_loss_scaling_and_zero():
+    v, mean, std, phys = _column()
+    x = torch.from_numpy((phys - mean) / std)
+    y = x.clone()
+    y[:, v.index("geopotential_500")] += 0.1          # perturb Z500: only the 600-500 and 500-250 layers change
+    hr = J.HypsometricResidual(v, mean, std, layers=J.ADJACENT_LAYERS, scale_m=1.0)
+    assert float(hr(x, x)) == 0.0
+    mse = hr.layer_mse(x, y).numpy()
+    changed = [hr.layers.index((500, 600)), hr.layers.index((250, 500))]
+    assert np.all(mse[changed] > 0) and np.allclose(np.delete(mse, changed), 0.0, atol=1e-6)
+    scales = np.sqrt(np.maximum(mse, 1e-12))
+    hr.set_scales(np.where(mse > 0, scales, 1.0))
+    assert abs(float(hr(x, y)) - len(changed) / 6) < 1e-4  # each perturbed layer contributes exactly 1, averaged over 6
+    with pytest.raises(ValueError):
+        hr.set_scales([1.0, -1.0, 1.0, 1.0, 1.0, 1.0])
+
+
+def test_parse_layers():
+    assert J.parse_layers("single") == ((500, 850),)
+    assert J.parse_layers("adjacent") == J.ADJACENT_LAYERS
+    assert J.parse_layers("850-500,925-850") == ((500, 850), (850, 925))
+    with pytest.raises(ValueError):
+        J.parse_layers("500-500")

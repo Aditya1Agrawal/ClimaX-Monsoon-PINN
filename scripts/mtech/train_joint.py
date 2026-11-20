@@ -18,6 +18,11 @@ v2 fixes (see docs/mtech/HAZARD_EXPERIMENT.md, "joint fine-tuning v1"):
 * non-finite batches (fp16 overflow) are skipped and counted;
 * head dropout / weight decay are configurable.
 
+Multi-layer physics (v3): --physics_layers adjacent --physics_scale_m auto constrains every adjacent
+pressure-level pair (925-850 ... 250-50 hPa), each layer scaled by the starting model's residual error
+on a training subset so that all layers count equally. The default (single 500-850 hPa layer, 18 m)
+reproduces v2 exactly.
+
 Smoke test (CPU ok): add --smoke [--tiny_model --from_scratch].
 Outputs: history.csv, hazard_results.csv, weather_test.csv, preds/, run_meta.json,
 bootstrap_vs_frozen.csv (with --compare_dir), best_encoder.ckpt (with --export_encoder).
@@ -73,7 +78,7 @@ def predict(model, data, idx, variables, lead, device, amp, bs=256):
     return np.concatenate(ws), (np.concatenate(hs) if hs else None)
 
 
-def evaluate_val(model, val, variables, lead, device, amp, w_lat_np, std, weather_idx, hz_idx):
+def evaluate_val(model, val, variables, lead, device, amp, w_lat_np, std, weather_idx, hz_idx, hyps=None):
     w, _ = predict(model, val, weather_idx, variables, lead, device, amp)
     _, y, _ = val.batch(weather_idx)
     err = ((w - y.numpy()) ** 2 * w_lat_np).mean(axis=(0, 2, 3))   # per variable, normalised units
@@ -81,6 +86,10 @@ def evaluate_val(model, val, variables, lead, device, amp, w_lat_np, std, weathe
     rmse_phys = np.sqrt(err) * std.reshape(-1)
     for v in ("geopotential_500", "temperature_850", "2m_temperature", "10m_u_component_of_wind"):
         out[f"val_rmse_{v}"] = float(rmse_phys[variables.index(v)])
+    if hyps is not None:  # residual-matching error (m) on every monitored layer, whether trained or not
+        with torch.no_grad():
+            mse = hyps.layer_mse(torch.from_numpy(w).to(hyps.coef.device), y.to(hyps.coef.device)).cpu().numpy()
+        out.update({f"val_hyps_{u}_{l}": float(np.sqrt(e)) for (u, l), e in zip(hyps.layers, mse)})
     if val.haz is not None and len(val.hazards):
         _, p = predict(model, val, hz_idx, variables, lead, device, amp)
         aps = [hm.average_precision(p[:, k], val.haz[hz_idx, k]) for k in range(p.shape[1])]
@@ -104,7 +113,11 @@ def parse():
     p.add_argument("--gradnorm_alpha", type=float, default=1.5)
     p.add_argument("--fixed_physics", type=float, default=0.001, help="fixed mode: physics weight on the raw m^2 loss (internship scale)")
     p.add_argument("--fixed_hazard", type=float, default=1.0)
-    p.add_argument("--physics_scale_m", type=float, default=18.0)
+    p.add_argument("--physics_layers", default="single",
+                   help="'single' (500-850 hPa, v2), 'adjacent' (all 6 adjacent level pairs) or e.g. '500-850,700-850'")
+    p.add_argument("--physics_scale_m", default="18",
+                   help="metres: one number, comma list (one per layer) or 'auto' (starting model's per-layer RMS error on train)")
+    p.add_argument("--scale_samples", type=int, default=4096, help="train samples used by --physics_scale_m auto")
     p.add_argument("--hazard_hours", default="0", help="issue hours used for hazard losses: e.g. '0' (one sample/day) or 'all'")
     p.add_argument("--hazard_batch", type=int, default=64)
     p.add_argument("--head_dropout", type=float, default=0.1)
@@ -205,10 +218,11 @@ def main():
     elif args.balancing == "gradnorm":
         weighting = J.GradNormWeighting(tasks, alpha=args.gradnorm_alpha).to(device)
     else:
-        fw = {"weather": 1.0, "physics": args.fixed_physics * args.physics_scale_m ** 2}
-        fw.update({h: args.fixed_hazard for h in hazards})
-        weighting = J.FixedWeighting({t: fw[t] for t in tasks})
-    phys = J.HypsometricResidual(variables, mean, std, scale_m=args.physics_scale_m).to(device)
+        weighting = None  # built below, once the physics scales are known
+    layers = J.parse_layers(args.physics_layers)
+    phys = J.HypsometricResidual(variables, mean, std, layers=layers).to(device)
+    monitor = sorted(set(J.ADJACENT_LAYERS) | set(J.SINGLE_LAYER) | set(layers), key=lambda t: (-t[1], -t[0]))
+    hyps_monitor = J.HypsometricResidual(variables, mean, std, layers=monitor).to(device)
     w_lat = J.lat_weights(lat, device)
     pos_w = torch.tensor(hm.pos_weights(train.haz[hz_pool]), device=device) if hazards else None
     log("tasks:", tasks, "| balancing:", args.balancing, "| pos_weight:", None if pos_w is None else pos_w.cpu().numpy().round(1).tolist())
@@ -234,8 +248,29 @@ def main():
     def lt_of(n):
         return torch.full((n,), lead / 100.0, device=device)
 
+    # ---- physics scales: fixed, per layer, or the starting model's residual error on a train subset ----
+    if args.physics_scale_m == "auto":
+        sidx = np.sort(np.random.default_rng(args.seed + 1).choice(len(train), size=min(args.scale_samples, len(train)), replace=False))
+        wp, _ = predict(model, train, sidx, variables, lead, device, amp)
+        _, ys, _ = train.batch(sidx)
+        with torch.no_grad():
+            rms = phys.layer_mse(torch.from_numpy(wp).to(device), ys.to(device)).sqrt().cpu().numpy()
+        scales = np.maximum(rms, 0.5)   # floor: never divide by a near-zero error
+    else:
+        scales = np.array([float(v) for v in str(args.physics_scale_m).split(",")])
+        if scales.size not in (1, len(layers)):
+            sys.exit(f"--physics_scale_m needs 1 or {len(layers)} values")
+    phys.set_scales(scales)
+    phys_scales = {f"{u}-{l}": float(np.sqrt(v)) for (u, l), v in zip(layers, phys.scale2.cpu().numpy())}
+    if "physics" in tasks:
+        log("physics layers and scales (m):", {k: round(v, 2) for k, v in phys_scales.items()})
+    if weighting is None:
+        fw = {"weather": 1.0, "physics": args.fixed_physics * float(phys.scale2.mean())}  # raw-m^2 weight, internship scale
+        fw.update({h: args.fixed_hazard for h in hazards})
+        weighting = J.FixedWeighting({t: fw[t] for t in tasks})
+
     # ---- reference: the starting model's validation weather ----
-    ref = evaluate_val(model, val, variables, lead, device, amp, w_lat_np, std, val_w_idx, val_h_idx)
+    ref = evaluate_val(model, val, variables, lead, device, amp, w_lat_np, std, val_w_idx, val_h_idx, hyps_monitor)
     w_ref = ref["val_w_mse"]
     log(f"start: val w_mse {w_ref:.4f} (hazard epochs must stay <= {w_ref * (1 + args.weather_tolerance):.4f})")
 
@@ -293,7 +328,7 @@ def main():
             n_ok += len(x)
         tr = {f"train_{t}": (sums[t] / n_ok if n_ok else float("nan")) for t in tasks}
         _, wts = weighting({t: torch.zeros((), device=device) for t in tasks})
-        vl = evaluate_val(model, val, variables, lead, device, amp, w_lat_np, std, val_w_idx, val_h_idx)
+        vl = evaluate_val(model, val, variables, lead, device, amp, w_lat_np, std, val_w_idx, val_h_idx, hyps_monitor)
         weather_ok = vl["val_w_mse"] <= w_ref * (1 + args.weather_tolerance)
         rec = {"epoch": ep, "minutes": (time.time() - te) / 60, "skipped_batches": skipped, "weather_ok": weather_ok,
                **tr, **{f"weight_{t}": wts[t] for t in tasks}, **vl}
@@ -383,6 +418,7 @@ def main():
     if args.export_encoder:
         torch.save({"state_dict": {"net." + k: v for k, v in model.net.state_dict().items()},
                     "hyper_parameters": {"physics_lambda": None, "physics_task": "physics" in tasks, "balancing": args.balancing,
+                                         "physics_layers": [list(t) for t in layers] if "physics" in tasks else None,
                                          "source": "train_joint", "init": init_meta.get("init")},
                     "epoch": int(best["epoch"])}, os.path.join(args.out_dir, "best_encoder.ckpt"))
         log("exported best_encoder.ckpt")
@@ -394,6 +430,8 @@ def main():
     sel = next(r for r in history if r["epoch"] == best["epoch"])
     json.dump({"args": vars(args), "git_commit": commit, "tasks": tasks, "hazards": hazards, **init_meta,
                "selected_epoch": int(best["epoch"]), "selection_rule": rule, "start_val_w_mse": w_ref,
+               "physics_layers": [list(t) for t in layers] if "physics" in tasks else None,
+               "physics_scales_m": phys_scales if "physics" in tasks else None,
                "selected_task_weights": {t: sel.get(f"weight_{t}") for t in tasks},
                "skipped_batches_total": int(sum(r.get("skipped_batches", 0) for r in history)),
                "n_pairs": {sp: len(d) for sp, d in data.items()}, "elapsed_min": round((time.time() - t0) / 60, 1)},

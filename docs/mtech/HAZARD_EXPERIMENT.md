@@ -208,3 +208,89 @@ Each v1 cause gets a targeted fix. Whether the fixes work must be shown by the K
 - **Comparison**: on identical test samples, against frozen heads on the *same* encoder, on the matching no-physics encoder, and against logistic, climatology and persistence (paired 7-day block bootstrap).
 - **Weather**: reported relative to the Stage-A starting encoder.
 - **Caveat**: Stage-A seeds vary the fine-tuning (data order, dropout) from one shared initial checkpoint. They are not independent from-scratch trainings.
+
+## Result: joint training v2 (Kaggle 2×T4, 2026-11-20, commit `24fe0e6`)
+
+Files: `docs/mtech/results/joint_v2/`. Stage A: 6 runs of 11–19 min. Stage C: 20–23 min per run. One NaN batch was skipped in total.
+
+### Stage A: encoder adapted to the corrected grid (test RMSE, mean ± sd over 3 seeds)
+
+| Variable | no physics | physics | climatology | v1 joint (for reference) |
+|---|---|---|---|---|
+| t2m (K) | **2.209 ± 0.002** | 2.239 ± 0.003 | 2.263 | 2.369 |
+| u10 (m/s) | **1.790 ± 0.001** | 1.803 ± 0.003 | 1.804 | 1.880 |
+| t850 (K) | **1.715 ± 0.001** | 1.727 ± 0.001 | 1.825 | 1.789 |
+| z500 (m²/s²) | 251.9 ± 0.2 | **251.3 ± 0.3** | 280.0 | 252.6 |
+| z850 (m²/s²) | **226.8 ± 0.3** | 227.2 ± 0.3 | 227.5 | 232.5 |
+| hyps. error 500–850 hPa (m), trained layer | 10.98 | 10.96 | 10.98 | 10.98 |
+| hyps. error 700–850 hPa (m) | **3.01** | 4.10 ± 0.01 | 3.01 | 4.49 |
+| hyps. error 850–925 hPa (m) | **1.53** | 3.64 ± 0.03 | 1.52 | 4.34 |
+
+- Grid adaptation fixed the v1 near-surface degradation: both variants now match or beat climatology everywhere.
+- **The physics loss did not help weather.** It was slightly worse near the surface (t2m +1.4 %, consistent across seeds) and marginally better at z500 (−0.2 %).
+- **It did not improve consistency on its own layer** (10.96 vs 10.98 m), and it **made the untrained lower layers markedly less consistent** (700–850 hPa +36 %, 850–925 hPa ×2.4), reproducibly across seeds.
+  A single-layer constraint with a two-level mean temperature appears to move the inconsistency into neighbouring layers.
+
+### Stage B: frozen heads on the Stage-A encoders (test PR-AUC, mean ± sd over 3 encoder seeds)
+
+| Hazard | no physics | physics | logistic | climatology |
+|---|---|---|---|---|
+| heatwave | 0.244 ± 0.001 | 0.248 ± 0.002 | 0.235 | 0.089 |
+| extreme wind | 0.060 ± 0.000 | 0.060 ± 0.001 | **0.074** | 0.033 |
+| extreme rainfall | **0.224 ± 0.004** | 0.219 ± 0.004 | 0.165 | 0.069 |
+
+- **Physics vs no physics (paired bootstrap per seed):**
+  - heat +0.005 [0.000, 0.009] (s0), +0.002 [−0.002, 0.006] (s1), +0.005 [−0.001, 0.010] (s2);
+  - wind and rain: all CIs include 0.
+  - **The physics loss has at most a very small effect on hazard detection** (a tiny heat gain in 1 of 3 seeds).
+  - The earlier padded-grid finding ("physics transfers worse") **does not replicate** once the grid confound is removed.
+- **Against logistic regression:**
+  - rainfall **+0.055 to +0.066, with the CI excluding 0 in all 6 runs**;
+  - heat +0.011 to +0.019 (CIs include 0);
+  - wind −0.012 (CIs include 0).
+- Grid adaptation alone raised frozen-head rainfall PR-AUC from 0.174 / 0.194 (v1 frozen) to 0.22.
+
+### Stage C: joint v2 from `A_phys_s1` (test PR-AUC; paired bootstrap vs frozen heads on the same encoder)
+
+| | heatwave | extreme wind | extreme rainfall |
+|---|---|---|---|
+| frozen `A_phys_s1` | 0.245 | 0.060 | 0.223 |
+| joint, capped uncertainty | 0.246 (−0.002 [−0.019, 0.016]) | 0.057 (−0.004 [−0.009, 0.001]) | 0.183 (**−0.043 [−0.085, −0.005]**) |
+| joint, GradNorm | **0.251** (+0.002 [−0.017, 0.020]) | 0.060 (−0.000 [−0.007, 0.009]) | 0.193 (−0.033 [−0.073, 0.004]) |
+
+- **The fixes worked mechanically.**
+  - Weather stayed within 1 % of the Stage-A start: capped uncertainty +0.2 to +0.7 %, GradNorm −0.2 to +0.2 %.
+  - No NaN batches; the hazard-weight cap held at 2.0.
+  - Overfitting was slower: training heat BCE fell 1.11 → 0.34, while validation PR-AUC plateaued instead of collapsing.
+- **GradNorm** pushed all hazard weights to the floor (0.05) from epoch 0, because their gradients on the shared layer were large. The encoder was then driven mainly by weather and physics, and the heads trained as usual (Adam is insensitive to the loss scale of parameters that only one task uses).
+  GradNorm also slightly improved low-layer consistency (−3 % / −6 % vs start).
+- **Joint fine-tuning still does not beat frozen heads on a grid-adapted encoder.** Heat and wind are unchanged; rainfall is worse (significantly so with uncertainty weighting).
+  Fine-tuning the encoder on the sparse rainfall labels (9 IMD boxes) appears to overfit.
+
+### Conclusions so far
+1. **Best hazard system: a grid-adapted ClimaX encoder + frozen hazard heads.** It significantly beats logistic regression for extreme rainfall and all climatology / persistence baselines. It is level with logistic for heat and below it (not significantly) for wind.
+2. **Single-layer hypsometric loss: no measurable benefit** for 72 h weather or hazard detection when fine-tuning, and it **degrades thickness consistency in the unconstrained lower layers**. This is seed-replicated.
+   *Caveat:* these encoders are fine-tuned from one λ=0 checkpoint, not trained from scratch.
+3. **Joint multi-task fine-tuning gives no hazard gain over frozen heads** and hurts rainfall. Adaptive balancing (capped uncertainty weighting, GradNorm) keeps weather stable but does not create positive transfer.
+
+## Next: multi-layer hypsometric loss (v3, notebook 07): design, not yet run
+
+**Motivation.** In v2 the single 500–850 hPa constraint did not improve its own layer and pushed the error into the layers it does not see (700–850 hPa +36 %, 850–925 hPa ×2.4).
+
+**Loss** (`joint.HypsometricResidual`, `--physics_layers adjacent --physics_scale_m auto`):
+- Residual matching on **every adjacent level pair**: 925–850, 850–700, 700–600, 600–500, 500–250 and 250–50 hPa.
+  - For each layer k: R_k = ΔΦ_k/g − (R_d/g)·T̄_k·ln(p_l/p_u).
+  - L_phys = mean_k MSE(R_k^pred, R_k^true) / s_k².
+- **Per-layer scale s_k:** the starting model's RMS residual error for that layer, on 4,096 training samples (floor 0.5 m). Every layer then starts at about 1, so thick, high-error layers (250–50 hPa) do not swamp the thin lower ones.
+- The three layers from 850 to 500 hPa telescope to the 500–850 thickness, with a log-p trapezoidal mean temperature over 500/600/700/850 hPa. The old layer is still constrained, with a better T̄ than the two-level average (unit-tested).
+- The defaults (`single`, 18 m) reproduce v2 exactly.
+- Validation now logs the residual-matching error of all 7 layers every epoch (`val_hyps_*`). The test evaluation adds the 500–600 hPa layer.
+
+**Experiment.**
+- **Stage A:** weather + multi-layer physics, uncertainty weighting, 3 seeds. Same recipe as v2 Stage A, from the same λ=0 checkpoint.
+- **Stage B:** frozen heads on all 9 encoders (multi, plus v2's nophys and phys, reused). Paired 7-day block bootstrap, multi vs each reference, per seed, plus multi vs logistic.
+
+**Hypotheses.**
+- H1: multi-layer physics reduces the residual error on all layers vs single-layer, and on the lower layers vs no physics.
+- H2: it does not degrade 72 h weather RMSE by more than 1 %.
+- H3: its effect on frozen-head PR-AUC (any sign) is reported with CIs.
