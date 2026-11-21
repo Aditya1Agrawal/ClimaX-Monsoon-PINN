@@ -273,7 +273,7 @@ Files: `docs/mtech/results/joint_v2/`. Stage A: 6 runs of 11–19 min. Stage C: 
    *Caveat:* these encoders are fine-tuned from one λ=0 checkpoint, not trained from scratch.
 3. **Joint multi-task fine-tuning gives no hazard gain over frozen heads** and hurts rainfall. Adaptive balancing (capped uncertainty weighting, GradNorm) keeps weather stable but does not create positive transfer.
 
-## Next: multi-layer hypsometric loss (v3, notebook 07): design, not yet run
+## Multi-layer hypsometric loss (v3, notebook 07): design
 
 **Motivation.** In v2 the single 500–850 hPa constraint did not improve its own layer and pushed the error into the layers it does not see (700–850 hPa +36 %, 850–925 hPa ×2.4).
 
@@ -294,3 +294,59 @@ Files: `docs/mtech/results/joint_v2/`. Stage A: 6 runs of 11–19 min. Stage C: 
 - H1: multi-layer physics reduces the residual error on all layers vs single-layer, and on the lower layers vs no physics.
 - H2: it does not degrade 72 h weather RMSE by more than 1 %.
 - H3: its effect on frozen-head PR-AUC (any sign) is reported with CIs.
+
+## Result: multi-layer physics v3 (Kaggle 2×T4, 2026-11-20, commit `7b8f94d`)
+Raw outputs: `docs/mtech/results/multilayer_v3/`.
+- The six v2 encoders were reused and re-evaluated on identical test samples.
+- No skipped batches.
+- The auto scales were consistent across seeds: 3.8 / 5.6 / 2.7 / 2.3 / 18 / 70 m, from 925–850 up to 250–50 hPa.
+
+### Stage A: test RMSE, mean over 3 seeds (seed sd ≤ 0.004 for every row below)
+| | multi-layer | no physics | single layer (v2) | climatology |
+|---|---|---|---|---|
+| t2m (K) | 2.213 | **2.209** | 2.239 | 2.263 |
+| u10 (m/s) | 1.792 | **1.790** | 1.803 | 1.804 |
+| T850 (K) | **1.713** | 1.715 | 1.727 | 1.825 |
+| z500 (m²/s²) | **250.9** | 251.9 | 251.3 | 280.0 |
+| hyps. error 850–925 hPa (m) | **1.48** | 1.53 | 3.64 | 1.53 |
+| hyps. error 700–850 hPa (m) | **2.93** | 3.01 | 4.10 | 3.02 |
+| hyps. error 600–700 hPa (m) | **1.58** | 1.63 | 1.63 | 1.65 |
+| hyps. error 500–600 hPa (m) | **1.76** | 1.77 | 3.25 | 1.77 |
+| hyps. error 250–500 hPa (m) | 16.86 | **16.73** | 17.22 | 16.92 |
+| hyps. error 50–250 hPa (m) | 70.47 | 70.51 | **70.39** | 74.31 |
+| hyps. error 500–850 hPa, two-level T̄ (m) | 11.06 | 10.98 | **10.96** | 10.98 |
+
+- **The v2 failure is fixed.**
+  - Against the single-layer loss, the multi-layer loss cuts the residual error by 59 % (850–925 hPa), 28 % (700–850 hPa) and 46 % (500–600 hPa).
+  - Weather is better on every reported variable (t2m −1.2 %).
+- **Against no physics:**
+  - The tropospheric layers below 500 hPa are 2.7–3.0 % more consistent (500–600 hPa −0.5 %), identically in all 3 seeds.
+  - The multi-layer encoder is the only model that beats climatology on all four of these layers.
+  - The upper layers are unchanged or slightly worse (250–500 hPa +0.8 %; 50–250 hPa ±0).
+  - The old 500–850 metric uses the two-level mean temperature, which the new loss deliberately replaces with the trapezoidal one. It is +0.75 %.
+- **Weather is neutral:** all variables are within ±0.4 % of no physics. The geopotential levels are slightly better (z500 −0.4 %), t2m +0.2 %.
+- *Caveat:* the improved layers are the quantities the loss trains, so the gain is expected. The finding is that it comes at no weather cost and without moving error into other layers, unlike v2.
+
+### Stage B: frozen heads, test PR-AUC (mean ± sd over 3 encoder seeds)
+| | heatwave | extreme wind | extreme rainfall |
+|---|---|---|---|
+| multi-layer | 0.242 ± 0.001 | 0.060 | 0.219 ± 0.004 |
+| no physics | 0.244 ± 0.001 | 0.060 | **0.224** ± 0.004 |
+| single layer | **0.248** ± 0.002 | 0.060 | 0.219 ± 0.004 |
+| logistic | 0.235 | **0.074** | 0.165 |
+
+- **Multi vs no physics:** all 9 per-seed CIs include 0.
+- **Multi vs single layer:**
+  - Heatwave is slightly lower: −0.005 and −0.009, with CIs excluding 0 in 2 of 3 seeds. The effect is tiny.
+  - Wind and rainfall are not significant.
+- **Multi vs logistic:**
+  - Rainfall is better in all 3 seeds: +0.054 to +0.063, with CIs excluding 0.
+  - Heatwave is +0.010 and wind −0.012, both not significant.
+
+### Conclusions (v3)
+4. **A column-wide (all adjacent layers) hypsometric loss with per-layer scaling makes the 72 h forecast more physically consistent throughout the troposphere, at no weather cost.**
+   - The single-layer loss of v2 degraded the layers it did not constrain; this design does not.
+   - The physics loss is therefore useful as a **consistency regulariser**.
+5. **No physics variant improves hazard detection.**
+   - Frozen-head PR-AUC is the same within noise for no physics, single layer and multi-layer.
+   - The hazard gain over logistic regression (extreme rainfall) comes from the grid-adapted ClimaX encoder itself.

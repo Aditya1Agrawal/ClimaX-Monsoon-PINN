@@ -1,0 +1,118 @@
+{
+ "args": {
+  "data_dir": "/kaggle/input/datasets/agrawaladi/climax-india-6x6-corrected/regional_climax_dataset_6x6_corrected",
+  "imd_dir": null,
+  "config": "configs/regional_india.yaml",
+  "init_ckpt": "/kaggle/input/datasets/agrawaladi/checkpoints-for-regional-forecasting-baseline/epoch_016.ckpt",
+  "from_scratch": false,
+  "hazards": [],
+  "no_hazards": true,
+  "no_physics": false,
+  "balancing": "uncertainty",
+  "max_hazard_weight": null,
+  "gradnorm_alpha": 1.5,
+  "fixed_physics": 0.001,
+  "fixed_hazard": 1.0,
+  "physics_layers": "adjacent",
+  "physics_scale_m": "auto",
+  "scale_samples": 4096,
+  "hazard_hours": "0",
+  "hazard_batch": 64,
+  "head_dropout": 0.1,
+  "head_weight_decay": 0.0001,
+  "epochs": 10,
+  "samples_per_epoch": 65536,
+  "batch_size": 128,
+  "lr_encoder": 0.0001,
+  "lr_heads": 0.0005,
+  "lr_weights": 0.01,
+  "warmup_steps": 500,
+  "patience": 3,
+  "weather_tolerance": 0.01,
+  "val_weather_stride": 6,
+  "seed": 1,
+  "device": null,
+  "no_amp": false,
+  "smoke": false,
+  "tiny_model": false,
+  "weather_eval_max_files": null,
+  "export_encoder": true,
+  "compare_dir": null,
+  "compare_sources": [],
+  "out_dir": "/kaggle/working/stageA/A_multi_s1"
+ },
+ "git_commit": "7b8f94df57fa4f4cf6b10539ba8541278fbdf4ce",
+ "tasks": [
+  "weather",
+  "physics"
+ ],
+ "hazards": [],
+ "init": "/kaggle/input/datasets/agrawaladi/checkpoints-for-regional-forecasting-baseline/epoch_016.ckpt",
+ "init_hparams": {
+  "pretrained_path": "",
+  "lr": 0.0005,
+  "beta_1": 0.9,
+  "beta_2": 0.99,
+  "weight_decay": 1e-05,
+  "warmup_epochs": 10000,
+  "max_epochs": 100000,
+  "warmup_start_lr": 1e-08,
+  "eta_min": 1e-08,
+  "physics_lambda": 0.0,
+  "physics_geopotential_upper": "geopotential_500",
+  "physics_geopotential_lower": "geopotential_850",
+  "physics_temperature_upper": "temperature_500",
+  "physics_temperature_lower": "temperature_850",
+  "physics_pressure_upper": 50000.0,
+  "physics_pressure_lower": 85000.0
+ },
+ "init_epoch": 16,
+ "selected_epoch": 7,
+ "selection_rule": "best val weather (no hazards)",
+ "start_val_w_mse": 0.3112933039665222,
+ "physics_layers": [
+  [
+   850,
+   925
+  ],
+  [
+   700,
+   850
+  ],
+  [
+   600,
+   700
+  ],
+  [
+   500,
+   600
+  ],
+  [
+   250,
+   500
+  ],
+  [
+   50,
+   250
+  ]
+ ],
+ "physics_scales_m": {
+  "850-925": 3.838916301727295,
+  "700-850": 5.639267921447754,
+  "600-700": 2.6988275051116943,
+  "500-600": 2.2552239894866943,
+  "250-500": 17.979127883911133,
+  "50-250": 69.45455932617188
+ },
+ "selected_task_weights": {
+  "weather": 16.783863067626953,
+  "physics": 3.1121389865875244
+ },
+ "skipped_batches_total": 0,
+ "n_pairs": {
+  "train": 280056,
+  "val": 34944,
+  "test": 34944
+ },
+ "elapsed_min": 13.2
+}
