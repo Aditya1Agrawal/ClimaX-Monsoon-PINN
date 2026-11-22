@@ -350,3 +350,53 @@ Raw outputs: `docs/mtech/results/multilayer_v3/`.
 5. **No physics variant improves hazard detection.**
    - Frozen-head PR-AUC is the same within noise for no physics, single layer and multi-layer.
    - The hazard gain over logistic regression (extreme rainfall) comes from the grid-adapted ClimaX encoder itself.
+
+## Thesis analysis of the v3 predictions (notebook 08, `scripts/mtech/make_analysis.py`, CPU only)
+Outputs:
+- figures in `docs/mtech/figures/analysis/`
+- tables in `docs/mtech/results/analysis/`
+
+"ClimaX" here means the mean probability of the frozen heads over the 3 multi-layer encoders (`A_multi_s0..2`).
+This 3-encoder ensemble scores slightly above the single-encoder mean: heat 0.247 vs 0.242, rain 0.227 vs 0.219.
+
+All fitted quantities use the validation years (2011–2014) only:
+- the Platt calibration;
+- the blend weight (grid 0, 0.1, …, 1);
+- the alarm threshold (best validation F1).
+
+### Calibration
+- The raw frozen-head and logistic probabilities are **strongly over-confident**: ECE 0.16–0.28, Brier skill vs climatology −1.4 to −10. This comes from the class-weighted losses (pos_weight / `class_weight="balanced"`).
+- **Platt scaling fixes it** without changing PR-AUC or ROC-AUC (it is monotonic). After calibration:
+  - ECE: 0.011 (heat), 0.001 (wind), 0.003 (rain);
+  - Brier skill vs climatology: +0.090, +0.014, +0.084.
+- The calibrated probabilities are what a user should see.
+
+### Blend of ClimaX and logistic (calibrated probabilities)
+| hazard | w (ClimaX) | blend PR-AUC | vs ClimaX | vs logistic |
+|---|---|---|---|---|
+| heatwave | 0.5 | **0.260** | +0.014 [−0.005, 0.030] | **+0.025 [0.013, 0.035]** |
+| extreme wind | 0.6 | **0.074** | **+0.012 [0.006, 0.021]** | +0.001 [−0.014, 0.012] |
+| extreme rainfall | 1.0 | 0.227 (= ClimaX) | 0 | **+0.063 [0.017, 0.117]** |
+
+The blend is at least as good as the better single model for every hazard, and the best overall system.
+- For **wind**, logistic carries the skill and ClimaX adds some.
+- For **rain**, validation gives logistic no weight.
+
+### Skill maps (per cell, ≥ 10 test events)
+- **Rainfall:** ClimaX beats logistic in 8 of 9 cells (+0.01 to +0.12), over central and peninsular India. It is worse in one cell (−0.05).
+- **Heatwave:** 11 of 22 cells are better. ClimaX gains most in the central-west (25°N row, +0.11 / +0.13; 20°N 79°E, +0.10) and is worse across the 31°N row (−0.03 to −0.07).
+- **Wind:** 11 of 24 cells are better. The cells where logistic is far better (−0.08 to −0.17) are over sea.
+
+### Case studies (forecasts issued 3 days ahead; calibrated; validation-F1 threshold)
+| event (test years) | event days | ClimaX hits / misses / false alarms | logistic |
+|---|---|---|---|
+| May 2015 heatwave, Andhra Pradesh / Telangana | 13 | 9 / 4 / 2 | 10 / 3 / 5 |
+| Nov–Dec 2015 Chennai floods | 8 | **5 / 3 / 6** | 1 / 7 / 2 |
+| July 2017 Gujarat floods | 6 | 1 / 5 / 3 | **3 / 3 / 7** |
+| Oct 2018 Cyclone Titli | 3 | 0 / 3 / 0 | 0 / 3 / 0 |
+
+- Both models picked up the 2015 heatwave about 3 days ahead; ClimaX had fewer false alarms.
+- ClimaX caught most of the Chennai rain days, which logistic missed.
+- Logistic did better for Gujarat 2017.
+- **Neither predicted Cyclone Titli.** A tropical cyclone is far smaller than a 5.6° cell, and its extreme winds are not resolved in the coarse inputs. This is a stated limitation of the 5.625° setup.
+- The 2018 Kerala floods are **not evaluable**: no IMD box with ≥ 50 % land coverage contains Kerala at this resolution.
