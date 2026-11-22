@@ -32,36 +32,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 from climax_hazards import analysis as A  # noqa: E402
 from climax_hazards import hazard_model as hm  # noqa: E402
 
-import matplotlib  # noqa: E402
+from climax_hazards.analysis import CASES  # noqa: E402
+from climax_hazards.viz import (C_CAL, C_CLIMAX, C_LOGISTIC, C_REF, DIV, GRID, MUTED, NICE, OBS, SEQ, TEXT, apply_style,  # noqa: E402
+                                draw_map, plt)
 
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-from matplotlib.colors import LinearSegmentedColormap  # noqa: E402
-
-# colours (validated categorical slots 1-3; neutral grey for the reference)
-C_CLIMAX, C_LOGISTIC, C_CAL, C_REF = "#2a78d6", "#eb6834", "#1baf7a", "#8a8984"
-SEQ = LinearSegmentedColormap.from_list("seq_blue", ["#eef4fc", "#9cc3ee", "#2a78d6", "#0d3b75"])
-DIV = LinearSegmentedColormap.from_list("div", ["#c2481a", "#eb6834", "#e6e5e1", "#2a78d6", "#0d3b75"])
-OBS = LinearSegmentedColormap.from_list("obs", ["#f3f2ef", "#3a3936"])
-TEXT, MUTED, GRID = "#0b0b0b", "#52514e", "#e2e1dc"
-plt.rcParams.update({"font.size": 9, "axes.edgecolor": MUTED, "axes.labelcolor": TEXT, "xtick.color": MUTED,
-                     "ytick.color": MUTED, "axes.spines.top": False, "axes.spines.right": False,
-                     "axes.titlesize": 10, "axes.titleweight": "bold", "figure.facecolor": "white"})
-
-NICE = {"heatwave": "Heatwave", "extreme_wind": "Extreme wind", "extreme_precip": "Extreme rainfall"}
-
-# Real events in the test years (2015-2018). Points are (lat, lon) of the affected place;
-# the nearest 5.625-degree cell centre is used. The labels (not these dates) decide what is an event.
-CASES = [
-    {"name": "heatwave_2015_andhra_telangana", "hazard": "heatwave", "title": "May 2015 heatwave, Andhra Pradesh / Telangana",
-     "points": [(16.5, 79.0), (18.0, 79.5)], "start": "2015-05-05", "end": "2015-06-10"},
-    {"name": "rain_2015_chennai", "hazard": "extreme_precip", "title": "Nov-Dec 2015 Chennai floods",
-     "points": [(13.08, 80.27)], "start": "2015-11-01", "end": "2015-12-15"},
-    {"name": "rain_2017_gujarat", "hazard": "extreme_precip", "title": "July 2017 Gujarat floods",
-     "points": [(24.2, 72.4)], "start": "2017-07-05", "end": "2017-08-10"},
-    {"name": "wind_2018_cyclone_titli", "hazard": "extreme_wind", "title": "October 2018 Cyclone Titli (Odisha / north Andhra)",
-     "points": [(18.9, 84.6)], "start": "2018-10-01", "end": "2018-10-20"},
-]
+apply_style()
 
 
 def parse():
@@ -84,31 +59,6 @@ def load_mean(preds_dir, prefix):
         sys.exit(f"no {prefix}_s*.npz in {preds_dir}")
     arrs = [np.load(f) for f in files]
     return {sp: np.mean([a[sp] for a in arrs], axis=0) for sp in ("val", "test")}, [os.path.basename(f)[:-4] for f in files]
-
-
-def cell_edges(c):
-    d = np.diff(c).mean()
-    return np.concatenate([c - d / 2, [c[-1] + d / 2]])
-
-
-def draw_map(ax, field, lat, lon, cmap, vmin, vmax, annotate=True, fmt="{:.2f}"):
-    im = ax.pcolormesh(cell_edges(lon), cell_edges(lat), np.ma.masked_invalid(field), cmap=cmap, vmin=vmin, vmax=vmax,
-                       edgecolors="white", linewidth=1.5)
-    if annotate:
-        for i in range(len(lat)):
-            for j in range(len(lon)):
-                v = field[i, j]
-                if np.isfinite(v):
-                    frac = (v - vmin) / (vmax - vmin) if vmax > vmin else 0
-                    dark = frac > 0.6 or (cmap is DIV and abs(v) > 0.6 * vmax)
-                    ax.text(lon[j], lat[i], fmt.format(v), ha="center", va="center", fontsize=7, color="white" if dark else TEXT)
-    ax.set_aspect("equal")
-    ax.set_xticks(lon[::2]); ax.set_yticks(lat[::2])
-    ax.set_xticklabels([f"{x:.0f}°E" for x in lon[::2]]); ax.set_yticklabels([f"{y:.0f}°N" for y in lat[::2]])
-    ax.tick_params(length=0)
-    for s in ax.spines.values():
-        s.set_visible(False)
-    return im
 
 
 def main():

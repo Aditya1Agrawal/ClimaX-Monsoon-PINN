@@ -18,6 +18,19 @@ from climax_hazards.hazard_model import _flat, average_precision
 
 EPS = 1e-6
 
+# Real events in the test years (2015-2018). Points are (lat, lon) of the affected place; the nearest
+# 5.625-degree cell centre is used. The labels (not these dates) decide which days are events.
+CASES = [
+    {"name": "heatwave_2015_andhra_telangana", "hazard": "heatwave", "title": "May 2015 heatwave, Andhra Pradesh / Telangana",
+     "points": [(16.5, 79.0), (18.0, 79.5)], "start": "2015-05-05", "end": "2015-06-10"},
+    {"name": "rain_2015_chennai", "hazard": "extreme_precip", "title": "Nov-Dec 2015 Chennai floods",
+     "points": [(13.08, 80.27)], "start": "2015-11-01", "end": "2015-12-15"},
+    {"name": "rain_2017_gujarat", "hazard": "extreme_precip", "title": "July 2017 Gujarat floods",
+     "points": [(24.2, 72.4)], "start": "2017-07-05", "end": "2017-08-10"},
+    {"name": "wind_2018_cyclone_titli", "hazard": "extreme_wind", "title": "October 2018 Cyclone Titli (Odisha / north Andhra)",
+     "points": [(18.9, 84.6)], "start": "2018-10-01", "end": "2018-10-20"},
+]
+
 
 # ----------------------------------------------------------------------------
 # Probabilistic scores

@@ -1,0 +1,13 @@
+# Demo environment (CPU only), tested with Python 3.13 on Windows.
+# Install with demo/setup_env.ps1 (also patches timm 0.6.12 for Python >= 3.11).
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.15.0+cpu
+timm==0.6.12
+numpy==2.5.5
+pandas==3.1.1
+scipy==1.18.1
+scikit-learn==1.9.1
+matplotlib==3.11.2
+PyYAML==6.0.3
+streamlit==1.67.0
+pytest
