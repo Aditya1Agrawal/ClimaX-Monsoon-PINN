@@ -79,3 +79,24 @@ def test_live_inference_reproduces_saved_predictions(backend):
     assert fc.weather_pred is not None and fc.weather_true is not None
     pe = backend.physics_errors("2015-05-22")
     assert set(pe["model"]) == {"multi-layer physics", "no physics"} and len(pe) == 12
+
+
+@needs_data
+@pytest.mark.skipif(not os.path.exists(os.path.join(REPO, "outputs/kaggle_v3/stageA/A_multi_s0/best_encoder.ckpt")),
+                    reason="checkpoints not present")
+def test_realtime_path_equals_validated_path(backend):
+    """forecast_from_fields (used for live GFS inputs) gives the same probabilities as the validated path on an ERA5 input."""
+    pytest.importorskip("timm")
+    d = np.datetime64("2015-05-22")
+    x = backend.x_phys[backend._day_index[d]]
+    out = backend.forecast_from_fields(x, d + np.timedelta64(3, "D"))
+    fc = backend.forecast(d, live=False)
+    defined = backend.defined_cells()
+    assert np.allclose(out["prob"][defined], fc.prob[defined], atol=1e-4)
+    assert all(out["applicable"].values())                      # May: heatwave season
+    nov = backend.forecast_from_fields(x, np.datetime64("2015-11-25"))
+    assert not nov["applicable"]["heatwave"] and not nov["alerts"][backend.hazards.index("heatwave")].any()
+    with pytest.raises(ValueError):
+        backend.forecast_from_fields(x * np.nan, d)
+    sk = backend.realtime_skill(backend.x_phys[:10], ["geopotential_500"])
+    assert sk.loc[0, "forecasts"] == 7 and sk.loc[0, "ClimaX"] < sk.loc[0, "persistence"]

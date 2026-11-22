@@ -99,6 +99,8 @@ class DemoBackend:
         # 00 UTC test fields (inputs, and the truth 3 days later)
         self.times, self.x_phys = hd.load_inputs(dd, "test", self.variables, (0,))
         self.days = self.times.astype("datetime64[D]")
+        # per-variable max |standardised value| of the ERA5 00 UTC test inputs (range check for external inputs)
+        self.era5_zmax = dict(zip(self.variables, np.abs((self.x_phys - self.mu) / self.sd).max(axis=(0, 2, 3)).astype(float)))
         self._day_index = {d: i for i, d in enumerate(self.days)}
 
         # saved predictions, targets, calibration, thresholds
@@ -247,6 +249,46 @@ class DemoBackend:
         alerts = np.stack([(prob[k] >= self.thresholds[h]) & valid[k] for k, h in enumerate(self.hazards)])
         return Forecast(d, tgt, self.hazards, prob, self.logistic["test"][k_pred], self.clim["test"][k_pred], obs, alerts,
                         dict(self.thresholds), self._fields(x[0]), weather, truth, used_live, time.time() - t0, diff)
+
+    # ---------------- real-time (inputs not from ERA5) ----------------
+    HEATWAVE_MONTHS = (3, 4, 5, 6)   # label definition: heatwaves are only defined March-June
+
+    def defined_cells(self) -> np.ndarray:
+        """(K, H, W) cells where each hazard is defined (heatwave: land; rainfall: IMD boxes; wind: all)."""
+        return np.isfinite(self.y["test"]).any(axis=0)
+
+    def forecast_from_fields(self, x_phys: np.ndarray, target_day) -> Dict:
+        """Run the model on one externally supplied (V, H, W) input in training units (e.g. GFS via Open-Meteo)."""
+        if x_phys.shape != (len(self.variables), len(self.lat), len(self.lon)) or not np.all(np.isfinite(x_phys)):
+            raise ValueError(f"input must be finite with shape {(len(self.variables), len(self.lat), len(self.lon))}")
+        t0 = time.time()
+        raw, w = self.predict_live(x_phys[None].astype(np.float32))
+        prob = self.calibrate(raw, "ClimaX")[0]
+        target = np.datetime64(target_day, "D")
+        month = int(str(target)[5:7])
+        applicable = {h: (month in self.HEATWAVE_MONTHS) if h == "heatwave" else True for h in self.hazards}
+        defined = self.defined_cells()
+        prob = np.where(defined, prob, np.nan)
+        alerts = np.stack([(prob[k] >= self.thresholds[h]) & defined[k] & applicable[h] for k, h in enumerate(self.hazards)])
+        return {"prob": prob, "alerts": alerts, "applicable": applicable, "weather_pred": self._fields(w[0]),
+                "weather_input": self._fields(x_phys), "seconds": time.time() - t0}
+
+    def realtime_skill(self, X_days: np.ndarray, variables: Sequence[str]) -> pd.DataFrame:
+        """Latitude-weighted RMSE of 3-day forecasts from consecutive daily inputs ``X_days`` (N, V, H, W),
+        verified against the input of 3 days later (the analysis of what happened), vs persistence."""
+        L = self.cfg.lead_days
+        if len(X_days) <= L:
+            raise ValueError("need more days than the lead time")
+        _, W = self.predict_live(X_days[:-L].astype(np.float32))
+        T, P = X_days[L:], X_days[:-L]
+        w = np.cos(np.deg2rad(self.lat))[:, None] * np.ones((len(self.lat), len(self.lon)))
+        rmse = lambda a: float(np.sqrt((w * a ** 2).sum((-2, -1)).mean() / w.sum()))
+        rows = []
+        for v in variables:
+            i = self.variables.index(v)
+            c, p = rmse(W[:, i] - T[:, i]), rmse(P[:, i] - T[:, i])
+            rows.append({"variable": v, "ClimaX": c, "persistence": p, "improvement_%": 100 * (1 - c / p), "forecasts": len(T)})
+        return pd.DataFrame(rows)
 
     def alert_table(self, fc: Forecast) -> pd.DataFrame:
         rows = []

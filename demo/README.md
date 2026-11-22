@@ -44,8 +44,18 @@ $env:PYTHONPATH = "src"; .\.venv\Scripts\python.exe -m pytest -q tests\mtech
 | Weather forecast | Input, forecast, ERA5 truth and error maps; RMSE against persistence for this forecast. |
 | Physics check | Hypsometric residual error per pressure layer: multi-layer physics vs no physics (this forecast, and the whole test period). |
 | Event replay | Day-by-day probabilities through a real event; **▶ Play** animates it. |
+| Today (live data) | **Real-time, experimental.** Today's 00 UTC NOAA GFS analysis (via Open-Meteo, at the 36 cell centres) → hazard probabilities and weather for 3 days ahead, next to GFS's own forecast. With an earlier issue day it verifies against what happened. A 4-week verification table shows the real-time skill. Needs internet. |
 | Validated results | Test PR-AUC table, weather RMSE table, reliability diagram, skill maps. |
 | About | Pipeline, labels, limitations. |
+
+## If they ask "can it forecast from today?"
+Open **Today (live data)**.
+- Show today's forecast for 3 days ahead, and how it compares with NOAA's operational GFS forecast.
+- Explain that it is **experimental**: the model was trained on ERA5, and the live input is GFS.
+- Open "How good is the real-time mode?". Over the last 4 weeks, 500 hPa geopotential and 10 m winds beat persistence by about 20 %. Temperatures do not, because GFS and ERA5 differ systematically near the surface and below ground over the Himalaya/Tibet at 5.6° (domain shift).
+- The validated scores remain the 2015–2018 ERA5 test, where ClimaX beats persistence on all 17 variables.
+- Heatwave alerts are off outside March–June, by the label definition.
+- Each live forecast is logged in `outputs/realtime/forecast_log.csv`, so it can be checked once the target day has passed.
 
 ## Suggested 5-minute script
 1. **Problem** (30 s): "One foundation model, three hazards, 3-day warning, over India."

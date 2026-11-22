@@ -14,6 +14,7 @@ import sys
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(REPO, "src"))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
@@ -129,7 +130,7 @@ c3.metric("Live inference (CPU)" if fc.live else "Source", f"{fc.seconds:.2f} s"
 c4.metric("Matches Kaggle run", f"Δ {fc.max_abs_diff_vs_saved:.0e}" if fc.max_abs_diff_vs_saved is not None else "n/a",
           help="Largest difference between this live forecast and the probabilities saved by the Kaggle run")
 
-tabs = st.tabs(["Hazard warning", "Weather forecast", "Physics check", "Event replay", "Validated results", "About"])
+tabs = st.tabs(["Hazard warning", "Weather forecast", "Physics check", "Event replay", "Today (live data)", "Validated results", "About"])
 
 # ---------------- hazard warning ----------------
 with tabs[0]:
@@ -266,8 +267,14 @@ with tabs[3]:
         st.dataframe(cs, hide_index=True, use_container_width=True)
 
 
-# ---------------- results ----------------
+# ---------------- live ----------------
 with tabs[4]:
+    import live_tab
+
+    live_tab.render(b, REPO, have_models and live)
+
+# ---------------- results ----------------
+with tabs[5]:
     st.subheader("Validated results on the test years 2015-2018")
     p = os.path.join(REPO, "docs/mtech/results/analysis/overall_test.csv")
     if os.path.exists(p):
@@ -298,7 +305,7 @@ with tabs[4]:
             st.image(fp, caption=cap, use_container_width=True)
 
 # ---------------- about ----------------
-with tabs[5]:
+with tabs[6]:
     st.subheader("How it works")
     st.markdown("""
 1. **Input**: ERA5 reanalysis at 00 UTC: 17 variables (2 m temperature, 10 m wind, temperature and geopotential at 7 levels) on a 6 × 6 grid (5.625°) over India.
